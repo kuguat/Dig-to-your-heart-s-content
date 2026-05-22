@@ -1,7 +1,7 @@
 {
-  "name": "artifact-excavation",
+  "name": "wageshuang",
   "version": "1.0.0",
-  "description": "文物发掘模拟游戏",
+  "description": "挖个爽 - 文物发掘模拟游戏",
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js"

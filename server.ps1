@@ -1,7 +1,7 @@
 $listener = New-Object System.Net.HttpListener
 $listener.Prefixes.Add("http://localhost:3000/")
 $listener.Start()
-Write-Host "Server running at http://localhost:3000" -ForegroundColor Green
+Write-Host "挖个爽 服务器运行中 http://localhost:3000" -ForegroundColor Green
 
 $root = "c:/Users/34046/CodeBuddy/20260520212226"
 $mimeTypes = @{

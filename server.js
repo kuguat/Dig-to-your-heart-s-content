@@ -13,6 +13,6 @@ app.get('/', (req, res) => {
 });
 
 app.listen(PORT, () => {
-    console.log(`游戏服务器已启动: http://localhost:${PORT}`);
+    console.log(`挖个爽 服务器已启动: http://localhost:${PORT}`);
     console.log('在浏览器中打开上述地址即可开始游戏');
 });
