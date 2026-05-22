@@ -1,0 +1,153 @@
+/**
+ * 存档管理器
+ */
+class SaveManager {
+    constructor(gameState) {
+        this.gameState = gameState;
+        this.saveKey = 'qianzai_game_save';
+        this.autoSaveInterval = 30000; // 30秒自动保存
+        this.autoSaveTimer = null;
+    }
+
+    // 开始自动存档
+    startAutoSave() {
+        if (this.autoSaveTimer) {
+            clearInterval(this.autoSaveTimer);
+        }
+        this.autoSaveTimer = setInterval(() => {
+            this.save();
+            console.log('Auto-saved');
+        }, this.autoSaveInterval);
+    }
+
+    // 停止自动存档
+    stopAutoSave() {
+        if (this.autoSaveTimer) {
+            clearInterval(this.autoSaveTimer);
+            this.autoSaveTimer = null;
+        }
+    }
+
+    // 保存游戏
+    save() {
+        const saveData = {
+            version: '1.0.0',
+            timestamp: Date.now(),
+            funds: {
+                mantissa: this.gameState.funds.mantissa,
+                exponent: this.gameState.funds.exponent
+            },
+            prestigePoints: this.gameState.prestigePoints,
+            currentEra: this.gameState.currentEra,
+            totalExcavations: this.gameState.totalExcavations,
+            totalArtifactsFound: this.gameState.totalArtifactsFound,
+            totalAuthenticFound: this.gameState.totalAuthenticFound,
+            totalFakesFound: this.gameState.totalFakesFound,
+            totalNationalTreasures: this.gameState.totalNationalTreasures,
+            upgrades: { ...this.gameState.upgrades },
+            prestigeLevel: this.gameState.prestigeLevel,
+            prestigeCount: this.gameState.prestigeCount,
+            discoveredArtifactIds: Array.from(this.gameState.discoveredArtifactIds)
+        };
+
+        try {
+            localStorage.setItem(this.saveKey, JSON.stringify(saveData));
+            return true;
+        } catch (e) {
+            console.error('Save failed:', e);
+            return false;
+        }
+    }
+
+    // 加载游戏
+    load() {
+        const savedData = localStorage.getItem(this.saveKey);
+        if (!savedData) return false;
+
+        try {
+            const data = JSON.parse(savedData);
+
+            // 恢复数据
+            this.gameState.funds = new BigNumber(data.funds.mantissa, data.funds.exponent);
+            this.gameState.prestigePoints = data.prestigePoints || 0;
+            this.gameState.currentEra = data.currentEra || 'neolithic';
+            this.gameState.totalExcavations = data.totalExcavations || 0;
+            this.gameState.totalArtifactsFound = data.totalArtifactsFound || 0;
+            this.gameState.totalAuthenticFound = data.totalAuthenticFound || 0;
+            this.gameState.totalFakesFound = data.totalFakesFound || 0;
+            this.gameState.totalNationalTreasures = data.totalNationalTreasures || 0;
+            this.gameState.upgrades = data.upgrades || this.gameState.upgrades;
+            this.gameState.prestigeLevel = data.prestigeLevel || 0;
+            this.gameState.prestigeCount = data.prestigeCount || 0;
+            this.gameState.discoveredArtifactIds = new Set(data.discoveredArtifactIds || []);
+
+            console.log('Game loaded successfully');
+            return true;
+        } catch (e) {
+            console.error('Load failed:', e);
+            return false;
+        }
+    }
+
+    // 检查是否有存档
+    hasSave() {
+        return localStorage.getItem(this.saveKey) !== null;
+    }
+
+    // 删除存档
+    deleteSave() {
+        localStorage.removeItem(this.saveKey);
+        localStorage.removeItem('qianzai_permanent_save');
+    }
+
+    // 获取存档信息
+    getSaveInfo() {
+        const savedData = localStorage.getItem(this.saveKey);
+        if (!savedData) return null;
+
+        try {
+            const data = JSON.parse(savedData);
+            return {
+                version: data.version,
+                timestamp: new Date(data.timestamp),
+                funds: new BigNumber(data.funds.mantissa, data.funds.exponent).toString(),
+                prestigeLevel: data.prestigeLevel,
+                prestigeCount: data.prestigeCount
+            };
+        } catch (e) {
+            return null;
+        }
+    }
+
+    // 保存永久数据（转生后保留）
+    savePermanent() {
+        const data = {
+            prestigePoints: this.gameState.prestigePoints,
+            prestigeCount: this.gameState.prestigeCount,
+            prestigeLevel: this.gameState.prestigeLevel,
+            totalNationalTreasures: this.gameState.totalNationalTreasures,
+            discoveredArtifactIds: Array.from(this.gameState.discoveredArtifactIds)
+        };
+        localStorage.setItem('qianzai_permanent_save', JSON.stringify(data));
+    }
+
+    // 加载永久数据
+    loadPermanent() {
+        const saved = localStorage.getItem('qianzai_permanent_save');
+        if (!saved) return false;
+
+        try {
+            const data = JSON.parse(saved);
+            this.gameState.prestigePoints = data.prestigePoints || 0;
+            this.gameState.prestigeCount = data.prestigeCount || 0;
+            this.gameState.prestigeLevel = data.prestigeLevel || 0;
+            this.gameState.totalNationalTreasures = data.totalNationalTreasures || 0;
+            this.gameState.discoveredArtifactIds = new Set(data.discoveredArtifactIds || []);
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+}
+
+window.SaveManager = SaveManager;
