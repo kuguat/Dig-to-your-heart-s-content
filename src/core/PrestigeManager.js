@@ -18,18 +18,17 @@ class PrestigeManager {
         return Math.floor(points / 100);
     }
 
-    // 检查是否可以升级声望
+    // 检查是否可以升级声望 — 门槛从 10 降至 5，转生更频繁
     canPrestige() {
-        // 解锁新时代所需声望
-        return this.gameState.jackpotPointsThisRun >= 10;
+        return this.gameState.jackpotPointsThisRun >= 5;
     }
 
     // 执行学术休假（转生）
     doPrestige() {
         const points = this.gameState.jackpotPointsThisRun;
 
-        if (points < 10) {
-            return { success: false, message: '基金点不足，需要至少10点' };
+        if (points < 5) {
+            return { success: false, message: '基金点不足，需要至少5点' };
         }
 
         // 保存永久数据

@@ -72,7 +72,7 @@ class GameState {
         return state;
     }
 
-    // 获取升级费用
+    // 获取升级费用 — 乘数从 1.8 降至 1.5，让升级系统真正可用
     getUpgradeCost(upgradeType) {
         const baseCosts = {
             luck: 1000,
@@ -82,18 +82,18 @@ class GameState {
             appraisalAccuracy: 2500
         };
         const level = this.upgrades[upgradeType];
-        return new BigNumber(baseCosts[upgradeType] * Math.pow(1.8, level));
+        return new BigNumber(Math.floor(baseCosts[upgradeType] * Math.pow(1.5, level)));
     }
 
-    // 获取升级效果
+    // 获取升级效果 — 平衡各线路，artifactValue 不再一家独大
     getUpgradeEffect(upgradeType) {
         const level = this.upgrades[upgradeType];
         const effects = {
-            luck: 0.02,              // 每级 +2% 真品率
+            luck: 0.03,              // 每级 +3% 真品率
             brushSize: 0.04,         // 每级 +4% 铲宽（挖土范围）
             excavationSpeed: 0.06,   // 每级 +6% 力道（挖掘深度）
-            artifactValue: 0.2,      // 每级 +20% 文物价值
-            appraisalAccuracy: 0.03  // 每级 +3% 鉴定准确率
+            artifactValue: 0.12,     // 每级 +12% 文物价值
+            appraisalAccuracy: 0.05  // 每级 +5% 鉴定准确率
         };
         return effects[upgradeType] * level;
     }

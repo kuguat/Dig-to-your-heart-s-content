@@ -35,10 +35,10 @@ class EconomyManager {
                this.gameState.funds.equals(amountBN);
     }
 
-    // 获得文物后处理
-    processArtifact(artifact, authenticity, condition) {
+    // 获得文物后处理 — digCost 用于计算赝品"血亏"退费
+    processArtifact(artifact, authenticity, condition, digCost = 0) {
         if (authenticity) {
-            // 真品
+            // 真品 — 暴富！稀有度倍率已大幅提升
             const value = this.gameState.calculateArtifactValue(
                 artifact.baseValue,
                 artifact.rarity,
@@ -54,9 +54,10 @@ class EconomyManager {
 
             return { type: 'authentic', value: value, artifact: artifact, condition: condition };
         } else {
-            // 赝品 - 也有安慰奖（报销考古材料费）
+            // 赝品 — 血亏！只返还探方成本的 0.5%~2%
             this.gameState.totalFakesFound++;
-            const consolation = new BigNumber(Math.floor(Math.random() * 150) + 50);
+            const ratio = 0.005 + Math.random() * 0.015;
+            const consolation = new BigNumber(Math.max(1, Math.floor(digCost * ratio)));
             this.addFunds(consolation);
             return { type: 'fake', value: consolation, artifact: artifact };
         }
@@ -64,7 +65,7 @@ class EconomyManager {
 
     // 计算本局可以获得的基金点
     calculateJackpotPoints() {
-        const basePoints = Math.floor(this.gameState.totalAuthenticFound * 0.1);
+        const basePoints = Math.floor(this.gameState.totalAuthenticFound * 0.25);
         const nationalBonus = this.gameState.totalNationalTreasures * 5;
         return basePoints + nationalBonus;
     }

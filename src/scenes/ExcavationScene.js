@@ -695,7 +695,8 @@ class ExcavationScene extends Phaser.Scene {
         else condition = 'pristine';
 
         const result = this.economy.processArtifact(
-            this.currentArtifact, isAuthentic, condition
+            this.currentArtifact, isAuthentic, condition,
+            this.site ? this.site.cost : 0
         );
 
         this.gameState.totalArtifactsFound++;

@@ -1,13 +1,13 @@
 // 文物数据配置
 const ArtifactData = {
-    // 稀有度定义
+    // 稀有度定义 — 暴富感：高稀有度=巨大回报
     rarity: {
         common: { name: '普通', color: '#888888', multiplier: 1 },
-        uncommon: { name: '少见', color: '#2ecc71', multiplier: 3 },
-        rare: { name: '罕见', color: '#3498db', multiplier: 10 },
-        epic: { name: '珍品', color: '#9b59b6', multiplier: 30 },
-        legendary: { name: '国宝', color: '#f39c12', multiplier: 100 },
-        mythic: { name: '传说', color: '#e74c3c', multiplier: 500 }
+        uncommon: { name: '少见', color: '#2ecc71', multiplier: 5 },
+        rare: { name: '罕见', color: '#3498db', multiplier: 15 },
+        epic: { name: '珍品', color: '#9b59b6', multiplier: 50 },
+        legendary: { name: '国宝', color: '#f39c12', multiplier: 200 },
+        mythic: { name: '传说', color: '#e74c3c', multiplier: 1000 }
     },
 
     // 品相等级

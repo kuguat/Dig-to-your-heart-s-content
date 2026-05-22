@@ -269,11 +269,11 @@ class MainScene extends Phaser.Scene {
         const canAfford = this.economy.canAfford(cost);
 
         const effectDescs = {
-            luck: '+2% 真品率',
+            luck: '+3% 真品率',
             brushSize: '+4% 铲宽',
             excavationSpeed: '+6% 力道',
-            artifactValue: '+20% 价值',
-            appraisalAccuracy: '+3% 精度'
+            artifactValue: '+12% 价值',
+            appraisalAccuracy: '+5% 精度'
         };
 
         const rowH = 28;
@@ -390,7 +390,7 @@ class MainScene extends Phaser.Scene {
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         prestigeBtn.on('pointerdown', () => this.doPrestige());
         prestigeBtn.on('pointerover', () => {
-            if (this.state.jackpotPointsThisRun >= 10) this.showPrestigeTooltip();
+            if (this.state.jackpotPointsThisRun >= 5) this.showPrestigeTooltip();
         });
         prestigeBtn.on('pointerout', () => this.hidePrestigeTooltip());
         this.prestigeBtn = prestigeBtn;
@@ -732,7 +732,7 @@ class MainScene extends Phaser.Scene {
         if (this.potteryBaseText) this.potteryBaseText.setText(`✅ 修复完成！+¥${earn}`);
         if (this.potteryPctText) this.potteryPctText.setText('已修复: 6/6 ✅');
 
-        this.laborPotteryCooldown = 12;
+        this.laborPotteryCooldown = 8;
         this.laborPotteryLabel.setColor('#666666');
         this.laborPotteryLabel.setText(`¥800~1200  |  ${this.laborPotteryCooldown}s`);
         this.laborPotteryBtn.setStyle({ color: '#666666' });
@@ -1543,7 +1543,7 @@ class MainScene extends Phaser.Scene {
         else if (conditionRoll < 0.9) condition = 'excellent';
         else condition = 'pristine';
 
-        const result = this.economy.processArtifact(this.currentArtifact, isAuthentic, condition);
+        const result = this.economy.processArtifact(this.currentArtifact, isAuthentic, condition, this.state.currentSite ? this.state.currentSite.cost : 0);
         this.state.totalArtifactsFound++;
         this.state.discoveredArtifactIds.add(this.currentArtifact.id);
 
@@ -1782,8 +1782,8 @@ class MainScene extends Phaser.Scene {
     }
 
     doPrestige() {
-        if (this.state.jackpotPointsThisRun < 10) {
-            this.showMessage('本局基金点不足10点，无法转生', 'error');
+        if (this.state.jackpotPointsThisRun < 5) {
+            this.showMessage('本局基金点不足5点，无法转生', 'error');
             return;
         }
 
@@ -1838,11 +1838,11 @@ class MainScene extends Phaser.Scene {
 
     showUpgradeTooltip(upgrade, level, cost) {
         const descMap = {
-            luck: `每级 +2% 真品率 | 当前 +${(this.state.getUpgradeEffect('luck')*100).toFixed(0)}%`,
+            luck: `每级 +3% 真品率 | 当前 +${(this.state.getUpgradeEffect('luck')*100).toFixed(0)}%`,
             brushSize: `每级 铲宽+4% | 一次刮除更多土`,
             excavationSpeed: `每级 力道+6% | 刮得更深更快`,
-            artifactValue: `每级 +20% 文物价值 | 当前 ×${(1+this.state.getUpgradeEffect('artifactValue')).toFixed(1)}`,
-            appraisalAccuracy: `每级 +3% 鉴定准确率`
+            artifactValue: `每级 +12% 文物价值 | 当前 ×${(1+this.state.getUpgradeEffect('artifactValue')).toFixed(2)}`,
+            appraisalAccuracy: `每级 +5% 鉴定准确率`
         };
         this.bottomText.setText(`💡 ${upgrade.name} Lv.${level}→Lv.${level+1} | ${descMap[upgrade.id] || ''}`);
     }
@@ -1867,7 +1867,7 @@ class MainScene extends Phaser.Scene {
             const nextEra = this.prestigeManager.getUnlockedEras();
             const eraCount = nextEra.length;
             const jp = this.state.jackpotPointsThisRun;
-            if (jp >= 10) {
+            if (jp >= 5) {
                 this.showMessage(`🎉 本局已有 ${jp} JP！点击右侧「开始转生」解锁永久加成`, 'success');
             } else if (eraCount <= 1) {
                 this.showMessage(`💡 继续发掘！攒够10 JP后转生即可解锁商周时代`, 'info');
@@ -1886,7 +1886,7 @@ class MainScene extends Phaser.Scene {
                     '💡 选择层位→拖动鼠标刮土→发现文物',
                     '💡 升级「文物倍率」可大幅提升收入',
                     `💡 当前声望 Lv.${this.state.prestigeLevel}，再${100 - (this.state.prestigePoints % 100)} JP 升级`,
-                    '💡 国宝上交国家获得 JP，凑够 10 点转生',
+                    '💡 国宝上交国家获得 JP，凑够 5 点即可转生',
                     '💡 没钱做零活，清理探方零风险赚 ¥300~500',
                 ];
                 this.bottomText.setText(tips[Math.floor(Math.random() * tips.length)]);
