@@ -26,5 +26,5 @@ const game = new Phaser.Game(config);
 window.game = game;
 
 // 游戏启动后显示
-console.log('🎮 《千载一现》游戏已启动');
-console.log('📖 考古之旅，从这里开始...');
+console.log('🎮 《挖个爽》游戏已启动');
+console.log('📖 挖个爽，从这里开始...');
