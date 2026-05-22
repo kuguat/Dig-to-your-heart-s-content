@@ -43,6 +43,18 @@ class BootScene extends Phaser.Scene {
             window.prestigeManager = new PrestigeManager(window.gameState);
             console.log('BootScene: PrestigeManager 初始化完成');
 
+            // 初始化音效系统
+            try {
+                window.audioManager = new AudioManager();
+                // 立即创建 AudioContext（此时是 suspended，需用户交互后才能 resume）
+                window.audioManager.init();
+                console.log('BootScene: AudioManager 初始化完成, state=' +
+                    (window.audioManager.ctx ? window.audioManager.ctx.state : 'null'));
+            } catch (e) {
+                console.warn('BootScene: AudioManager 初始化失败，音效已禁用', e);
+                window.audioManager = null;
+            }
+
             // 生成占位纹理
             console.log('BootScene: 开始生成纹理...');
             this.createAllTextures();
@@ -53,6 +65,20 @@ class BootScene extends Phaser.Scene {
                 console.log('BootScene: 加载存档...');
                 window.saveManager.load();
             }
+
+            // 加载音效（首次用户交互时激活 AudioContext）
+            let audioUnlocked = false;
+            const resumeAudio = () => {
+                if (audioUnlocked) return;
+                audioUnlocked = true;
+                if (window.audioManager && window.audioManager.enabled) {
+                    console.log('BootScene: 用户首次交互，激活音频...');
+                    window.audioManager.resume();
+                }
+            };
+            ['pointerdown', 'mousedown', 'keydown', 'touchstart'].forEach(type => {
+                document.addEventListener(type, resumeAudio, { once: true, passive: true });
+            });
 
             // 更新加载界面
             document.getElementById('loading-screen').classList.add('hidden');
@@ -89,75 +115,202 @@ class BootScene extends Phaser.Scene {
         g.generateTexture('panel_bg', 200, 300);
         g.clear();
 
-        // 4. 图标：钱
+        // ═══════════════════════════════════════════════════
+        //  图标纹理 — 48x48，四对冲突图标轮廓彻底不同：
+        //    声望=盾形 vs 运气=十字花形
+        //    金钱=圆铜钱 vs 倍率=菱牌
+        //    真品/赝品=圆角条牌 vs 精度=方靶
+        //    速度=闪电形 vs 发掘=铲形
+        // ═══════════════════════════════════════════════════
+
+        // ── 4. icon_money — 金钱：圆形铜钱 ──
         g.fillStyle(0xf4d03f, 1);
-        g.fillCircle(24, 24, 18);
-        g.fillStyle(0xc9a227, 1);
-        g.fillCircle(24, 24, 12);
+        g.fillCircle(24, 24, 22);
+        g.fillStyle(0xe2bc29, 1);
+        g.fillCircle(24, 24, 17);
+        g.fillStyle(0x2c1810, 1);
+        g.fillRect(17, 17, 14, 14);
+        g.lineStyle(1, 0xfef3c7, 0.5);
+        g.strokeCircle(24, 24, 21);
         g.generateTexture('icon_money', 48, 48);
         g.clear();
 
-        // 5. 图标：声望
-        g.fillStyle(0xd4a574, 1);
-        g.fillCircle(24, 24, 18);
-        g.fillStyle(0xf4d03f, 1);
-        g.fillCircle(24, 24, 10);
+        // ── 5. icon_prestige — 声望：棕色盾形+金色五角星 ──
+        g.fillStyle(0x5a4030, 1);
+        g.fillTriangle(8, 4, 40, 4, 40, 18);
+        g.fillTriangle(8, 4, 8, 18, 40, 18);
+        g.fillTriangle(8, 18, 40, 18, 24, 44);
+        g.fillStyle(0xffd700, 1);
+        g.fillTriangle(24, 7, 28, 18, 20, 18);
+        g.fillTriangle(18, 14, 30, 28, 24, 30);
+        g.fillTriangle(30, 14, 18, 28, 24, 30);
+        g.fillTriangle(24, 28, 28, 14, 20, 14);
+        g.fillTriangle(14, 18, 26, 14, 26, 22);
+        g.fillTriangle(34, 18, 22, 14, 22, 22);
         g.generateTexture('icon_prestige', 48, 48);
         g.clear();
 
-        // 6. 图标：转生
+        // ── 6. icon_prestige2 — JP：紫色圆+白色菱形 ──
         g.fillStyle(0x9b59b6, 1);
-        g.fillCircle(24, 24, 18);
+        g.fillCircle(24, 24, 22);
         g.fillStyle(0xf5e6d3, 1);
-        g.fillCircle(24, 24, 10);
+        g.fillTriangle(24, 5, 38, 24, 24, 43);
+        g.fillTriangle(10, 24, 24, 5, 24, 43);
+        g.fillStyle(0x9b59b6, 1);
+        g.fillTriangle(24, 10, 32, 24, 24, 38);
+        g.fillTriangle(16, 24, 24, 10, 24, 38);
         g.generateTexture('icon_prestige2', 48, 48);
         g.clear();
 
-        // 7. 图标：发掘
+        // ── 7. icon_excavate — 发掘次数：铲形（L形） ──
+        g.fillStyle(0x5a4030, 1);
+        g.fillRect(19, 4, 10, 22);
         g.fillStyle(0x8b7355, 1);
-        g.fillRect(20, 28, 8, 18);
-        g.fillTriangle(14, 28, 34, 28, 24, 10);
+        g.fillRect(10, 24, 28, 6);
+        g.fillTriangle(10, 30, 38, 30, 24, 44);
+        g.fillStyle(0xb8956a, 1);
+        g.fillRect(12, 25, 24, 3);
         g.generateTexture('icon_excavate', 48, 48);
         g.clear();
 
-        // 8. 图标：博物馆
+        // ── 8. icon_museum — 博物馆：三角顶+方房体 ──
+        g.fillStyle(0x8b7355, 1);
+        g.fillRect(6, 30, 36, 16);
         g.fillStyle(0xd4a574, 1);
-        g.fillRect(10, 22, 28, 20);
-        g.fillTriangle(6, 22, 42, 22, 24, 6);
-        g.generateTexture('icon_museum', 48, 42);
+        g.fillRect(10, 16, 28, 16);
+        g.fillStyle(0xc4a46a, 1);
+        g.fillRect(6, 12, 36, 8);
+        g.fillTriangle(4, 12, 44, 12, 24, 3);
+        g.fillStyle(0x2c1810, 1);
+        g.fillRect(19, 23, 10, 14);
+        g.generateTexture('icon_museum', 48, 48);
         g.clear();
 
-        // 9. 图标：刷子
+        // ── 9. icon_brush — 毛刷：刷形工具 ──
+        g.fillStyle(0x5a4030, 1);
+        g.fillRect(19, 2, 10, 20);
+        g.fillStyle(0x9b8b6f, 1);
+        g.fillRect(17, 18, 14, 5);
         g.fillStyle(0xd4a574, 1);
-        g.fillRect(10, 5, 10, 30);
-        g.fillRect(8, 35, 14, 15);
-        g.generateTexture('icon_brush', 32, 50);
+        g.fillRect(10, 23, 28, 22);
+        g.lineStyle(1, 0xb8956a, 0.5);
+        for (let ry = 27; ry < 44; ry += 4) {
+            g.lineBetween(11, ry, 37, ry);
+        }
+        g.fillStyle(0xc4b89a, 1);
+        g.fillRect(17, 19, 14, 2);
+        g.generateTexture('icon_brush', 48, 48);
         g.clear();
 
-        // 10. 图标：升级
-        g.fillStyle(0xf4d03f, 1);
-        g.fillCircle(24, 24, 18);
-        g.fillStyle(0xffffff, 1);
-        g.fillTriangle(24, 12, 30, 28, 18, 28);
+        // ── 10. icon_upgrade — 升级：绿圆+向上箭头 ──
+        g.fillStyle(0x27ae60, 1);
+        g.fillCircle(24, 24, 22);
+        g.fillStyle(0xf5e6d3, 1);
+        g.fillTriangle(24, 8, 34, 30, 14, 30);
+        g.fillRect(21, 26, 6, 14);
         g.generateTexture('icon_upgrade', 48, 48);
         g.clear();
 
-        // 11. 图标：真品
+        // ── 11. icon_authentic — 真品：绿色圆角条牌+白色粗勾✓ ──
         g.fillStyle(0x27ae60, 1);
-        g.fillCircle(24, 24, 18);
+        g.fillRoundedRect(3, 10, 42, 28, 8);
+        g.lineStyle(5, 0xffffff, 1);
+        g.lineBetween(14, 26, 22, 34);
+        g.lineBetween(22, 34, 36, 16);
         g.generateTexture('icon_authentic', 48, 48);
         g.clear();
 
-        // 12. 图标：赝品
+        // ── 12. icon_fake — 赝品：红色圆角条牌+白色粗叉✗ ──
         g.fillStyle(0xc0392b, 1);
-        g.fillCircle(24, 24, 18);
+        g.fillRoundedRect(3, 10, 42, 28, 8);
+        g.lineStyle(5, 0xffffff, 1);
+        g.lineBetween(14, 16, 34, 32);
+        g.lineBetween(34, 16, 14, 32);
         g.generateTexture('icon_fake', 48, 48);
         g.clear();
 
-        // 13. 图标：国宝
+        // ── 13. icon_national — 国宝：金圆底+皇冠 ──
         g.fillStyle(0xf39c12, 1);
-        g.fillCircle(24, 24, 18);
+        g.fillCircle(24, 24, 22);
+        g.fillStyle(0xf5e6d3, 1);
+        g.fillRect(8, 30, 32, 8);
+        g.fillRect(10, 14, 8, 18);
+        g.fillRect(20, 10, 8, 22);
+        g.fillRect(30, 14, 8, 18);
+        g.fillStyle(0xe74c3c, 1);
+        g.fillCircle(24, 8, 3);
+        g.fillCircle(14, 12, 3);
+        g.fillCircle(34, 12, 3);
         g.generateTexture('icon_national', 48, 48);
+        g.clear();
+
+        // ── 14. icon_luck — 运气：绿色十字花形（竖+横圆角条，无圆底） ──
+        g.fillStyle(0x27ae60, 1);
+        g.fillRoundedRect(16, 3, 16, 42, 6);
+        g.fillRoundedRect(3, 16, 42, 16, 6);
+        g.fillStyle(0xf5e6d3, 1);
+        g.fillCircle(24, 24, 5);
+        g.generateTexture('icon_luck', 48, 48);
+        g.clear();
+
+        // ── 15. icon_speed — 挖掘速度：蓝色闪电形（锯齿折线） ──
+        g.fillStyle(0x3498db, 1);
+        g.fillTriangle(28, 3, 36, 22, 22, 22);
+        g.fillRect(22, 18, 6, 8);
+        g.fillTriangle(20, 24, 28, 45, 14, 24);
+        g.fillRect(20, 22, 4, 4);
+        g.fillStyle(0xffd700, 1);
+        g.fillTriangle(30, 6, 35, 19, 25, 19);
+        g.fillTriangle(22, 27, 27, 42, 17, 27);
+        g.generateTexture('icon_speed', 48, 48);
+        g.clear();
+
+        // ── 16. icon_multiplier — 文物倍率：橙色菱形牌+白色粗叉× ──
+        g.fillStyle(0xe67e22, 1);
+        g.fillTriangle(24, 3, 45, 24, 24, 45);
+        g.fillTriangle(3, 24, 24, 3, 24, 45);
+        g.lineStyle(5, 0xffffff, 1);
+        g.lineBetween(15, 15, 33, 33);
+        g.lineBetween(33, 15, 15, 33);
+        g.generateTexture('icon_multiplier', 48, 48);
+        g.clear();
+
+        // ── 17. icon_accuracy — 鉴定精度：紫色方靶+红心 ──
+        g.fillStyle(0x8e44ad, 1);
+        g.fillRoundedRect(2, 2, 44, 44, 4);
+        g.fillStyle(0x2c1810, 1);
+        g.fillRoundedRect(7, 7, 34, 34, 3);
+        g.lineStyle(3, 0xffffff, 1);
+        g.strokeCircle(24, 24, 14);
+        g.strokeCircle(24, 24, 8);
+        g.fillStyle(0xe74c3c, 1);
+        g.fillCircle(24, 24, 4);
+        g.fillStyle(0xffffff, 1);
+        g.fillRect(23, 4, 2, 8);
+        g.fillRect(23, 36, 2, 8);
+        g.fillRect(4, 23, 8, 2);
+        g.fillRect(36, 23, 8, 2);
+        g.generateTexture('icon_accuracy', 48, 48);
+        g.clear();
+
+        // ── 18. icon_collection — 图鉴：翻开书本形 ──
+        g.fillStyle(0x8b7355, 1);
+        g.fillRoundedRect(5, 12, 17, 30, 4);
+        g.fillStyle(0xd4a574, 1);
+        g.fillRoundedRect(26, 12, 17, 30, 4);
+        g.fillStyle(0x5a4030, 1);
+        g.fillRect(22, 12, 4, 30);
+        g.fillStyle(0xc4a46a, 1);
+        for (let ly = 18; ly < 38; ly += 6) {
+            g.fillRect(8, ly, 11, 2);
+        }
+        g.fillStyle(0xf5e6d3, 1);
+        for (let ly = 18; ly < 38; ly += 6) {
+            g.fillRect(29, ly, 11, 2);
+        }
+        g.fillStyle(0xe74c3c, 1);
+        g.fillTriangle(24, 40, 28, 47, 20, 47);
+        g.generateTexture('icon_collection', 48, 48);
         g.clear();
 
         // 14. 稀有度图标

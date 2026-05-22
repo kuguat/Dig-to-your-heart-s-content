@@ -14,7 +14,7 @@ const GameConfig = {
         width: 500,
         height: 400,
         x: 350,
-        y: 200
+        y: 185
     },
 
     // 颜色主题
@@ -40,9 +40,9 @@ const GameConfig = {
         mingqing: '#8e44ad'       // 明清（紫）
     },
 
-    // 音效配置（占位）
+    // 音效配置
     audio: {
-        enabled: false,
+        enabled: true,
         volume: 0.5
     },
 

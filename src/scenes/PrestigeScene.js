@@ -9,6 +9,9 @@ class PrestigeScene extends Phaser.Scene {
     create() {
         this.state = window.gameState;
         this.prestigeManager = window.prestigeManager;
+        this.audio = window.audioManager;
+
+        this.cameras.main.fadeIn(400, 26, 15, 10);
 
         this.createBackground();
         this.createUI();
@@ -38,7 +41,9 @@ class PrestigeScene extends Phaser.Scene {
         }).setOrigin(0, 0.5).setInteractive({ useHandCursor: true });
 
         backBtn.on('pointerdown', () => {
-            this.scene.start('MainScene');
+            if (this.audio) this.audio.click();
+            this.cameras.main.fadeOut(300, 26, 15, 10);
+            this.time.delayedCall(300, () => this.scene.start('MainScene'));
         });
 
         // 标题

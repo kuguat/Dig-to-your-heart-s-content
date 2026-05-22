@@ -12,9 +12,13 @@ class MainScene extends Phaser.Scene {
         this.economy = window.economyManager;
         this.saveManager = window.saveManager;
         this.prestigeManager = window.prestigeManager;
+        this.audio = window.audioManager;
 
         // 启动自动存档
         this.saveManager.startAutoSave();
+
+        // 入场淡入过渡
+        this.cameras.main.fadeIn(400, 26, 15, 10);
 
         // 创建界面
         this.createBackground();
@@ -57,18 +61,18 @@ class MainScene extends Phaser.Scene {
     createHeader() {
         const headerY = 35;
 
-        this.add.image(50, headerY, 'icon_prestige').setScale(0.8);
-        this.prestigeText = this.add.text(75, headerY - 8, `声望 Lv.${this.state.prestigeLevel}`, {
+        this.add.image(60, headerY, 'icon_prestige').setScale(0.8);
+        this.prestigeText = this.add.text(85, headerY - 8, `声望 Lv.${this.state.prestigeLevel}`, {
             fontSize: '18px', fontFamily: 'Microsoft YaHei', color: '#d4a574'
         });
 
-        this.add.image(200, headerY, 'icon_prestige2').setScale(0.8);
-        this.jpText = this.add.text(225, headerY - 8, `${this.state.prestigePoints} JP`, {
+        this.add.image(195, headerY, 'icon_prestige2').setScale(0.8);
+        this.jpText = this.add.text(220, headerY - 8, `${this.state.prestigePoints} JP`, {
             fontSize: '18px', fontFamily: 'Microsoft YaHei', color: '#9b59b6'
         });
 
-        this.add.image(350, headerY, 'icon_money').setScale(0.8);
-        this.fundsText = this.add.text(375, headerY - 8, `¥${this.state.funds.toString()}`, {
+        this.add.image(330, headerY, 'icon_money').setScale(0.8);
+        this.fundsText = this.add.text(355, headerY - 8, `¥${this.formatMoney(this.state.funds.toNumber())}`, {
             fontSize: '22px', fontFamily: 'Microsoft YaHei', color: '#f4d03f', fontStyle: 'bold'
         });
 
@@ -83,7 +87,7 @@ class MainScene extends Phaser.Scene {
         ];
 
         eras.forEach((era, index) => {
-            const x = 550 + index * 80;
+            const x = 540 + index * 120;
             const btn = this.add.text(x, headerY, era.name, {
                 fontSize: '16px', fontFamily: 'Microsoft YaHei',
                 color: index === 0 ? '#d4a574' : '#8b7355',
@@ -91,6 +95,7 @@ class MainScene extends Phaser.Scene {
                 padding: { x: 15, y: 5 }
             }).setOrigin(0.5).setInteractive({ useHandCursor: true })
               .on('pointerdown', () => this.selectEra(era.id));
+            this.addButtonEffects(btn, 1.08);
             this.eraButtons.push({ btn, era });
         });
 
@@ -132,10 +137,10 @@ class MainScene extends Phaser.Scene {
         // 层位选择区域 —— 加分隔线与发掘区拉开距离
         this.siteSeparator = this.add.graphics();
         this.siteSeparator.lineStyle(1, 0xd4a574, 0.25);
-        this.siteSeparator.lineBetween(ex.x, ex.y + ex.height + 18, ex.x + ex.width, ex.y + ex.height + 18);
+        this.siteSeparator.lineBetween(ex.x, ex.y + ex.height + 32, ex.x + ex.width, ex.y + ex.height + 32);
 
         this.siteButtons = [];
-        const siteY = ex.y + ex.height + 40;
+        const siteY = ex.y + ex.height + 55;
         this.createSiteButtons(siteY);
     }
 
@@ -202,7 +207,7 @@ class MainScene extends Phaser.Scene {
 
     createLeftPanel() {
         const panelX = 20;
-        const panelY = 90;
+        const panelY = 155;
         const panelH = 510;
 
         const panelBg = this.add.graphics();
@@ -220,12 +225,12 @@ class MainScene extends Phaser.Scene {
             { label: '发现文物', key: 'totalArtifactsFound', icon: 'icon_museum' },
             { label: '真品/赝品', key: 'authFakeRatio', icon: 'icon_authentic', custom: true },
             { label: '国宝数量', key: 'totalNationalTreasures', icon: 'icon_national' },
-            { label: '图鉴收集', key: 'collectionProgress', icon: 'icon_money', custom: true }
+            { label: '图鉴收集', key: 'collectionProgress', icon: 'icon_collection', custom: true }
         ];
 
         this.statTexts = {};
         stats.forEach((stat, index) => {
-            const y = panelY + 55 + index * 32;
+            const y = panelY + 55 + index * 38;
             this.add.image(panelX + 25, y, stat.icon).setScale(0.6);
             this.add.text(panelX + 50, y - 5, stat.label + ':', {
                 fontSize: '14px', fontFamily: 'Microsoft YaHei', color: '#8b7355'
@@ -235,7 +240,7 @@ class MainScene extends Phaser.Scene {
             }).setOrigin(1, 0);
         });
 
-        const dividerY = panelY + 55 + 5 * 32 + 10;
+        const dividerY = panelY + 55 + 5 * 38 + 10;
         const div = this.add.graphics();
         div.lineStyle(1, 0xd4a574, 0.25);
         div.lineBetween(panelX + 15, dividerY, panelX + 265, dividerY);
@@ -246,16 +251,16 @@ class MainScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         const upgrades = [
-            { id: 'luck', name: '勘探运气', icon: 'icon_prestige' },
+            { id: 'luck', name: '勘探运气', icon: 'icon_luck' },
             { id: 'brushSize', name: '挖掘范围', icon: 'icon_brush' },
-            { id: 'excavationSpeed', name: '挖掘速度', icon: 'icon_excavate' },
-            { id: 'artifactValue', name: '文物倍率', icon: 'icon_money' },
-            { id: 'appraisalAccuracy', name: '鉴定精度', icon: 'icon_authentic' }
+            { id: 'excavationSpeed', name: '挖掘速度', icon: 'icon_speed' },
+            { id: 'artifactValue', name: '文物倍率', icon: 'icon_multiplier' },
+            { id: 'appraisalAccuracy', name: '鉴定精度', icon: 'icon_accuracy' }
         ];
 
         this.upgradeButtons = [];
         upgrades.forEach((upgrade, index) => {
-            const y = upgradeTitleY + 25 + index * 30;
+            const y = upgradeTitleY + 25 + index * 36;
             const btn = this.createUpgradeButton(panelX + 15, y, upgrade);
             this.upgradeButtons.push({ btn, upgrade });
         });
@@ -322,7 +327,7 @@ class MainScene extends Phaser.Scene {
 
     createRightPanel() {
         const panelX = this.config.width - 300;
-        const panelY = 90;
+        const panelY = 180;
 
         const panelBg = this.add.graphics();
         panelBg.fillStyle(0x2c1810, 0.95);
@@ -338,7 +343,13 @@ class MainScene extends Phaser.Scene {
             fontSize: '16px', fontFamily: 'Microsoft YaHei', color: '#f5e6d3',
             backgroundColor: '#3d2817', padding: { x: 20, y: 10 }
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-        museumBtn.on('pointerdown', () => this.scene.start('MuseumScene'));
+        museumBtn.on('pointerdown', () => {
+            if (this.audio) this.audio.click();
+            this.cameras.main.fadeOut(300, 26, 15, 10);
+            this.time.delayedCall(300, () => this.scene.start('MuseumScene'));
+        });
+        this.addButtonEffects(museumBtn);
+        // 博物馆出土数显示
 
         this.add.text(panelX + 20, panelY + 110, '本局收获:', {
             fontSize: '14px', fontFamily: 'Microsoft YaHei', color: '#8b7355'
@@ -356,8 +367,9 @@ class MainScene extends Phaser.Scene {
         this.laborCleanBtn = this.add.text(panelX + 140, panelY + 200, '🧹 清理探方', {
             fontSize: '14px', fontFamily: 'Microsoft YaHei', color: '#8b7355',
             backgroundColor: '#3d2817', padding: { x: 14, y: 8 }
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-        this.laborCleanBtn.on('pointerdown', () => this.doCleanJob());
+            }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        this.laborCleanBtn.on('pointerdown', () => { if (this.audio) this.audio.click(); this.doCleanJob(); });
+        this.addButtonEffects(this.laborCleanBtn);
 
         this.laborCleanLabel = this.add.text(panelX + 140, panelY + 228, '¥300~500  |  就绪', {
             fontSize: '11px', fontFamily: 'Microsoft YaHei', color: '#5a7a5a'
@@ -367,8 +379,9 @@ class MainScene extends Phaser.Scene {
         this.laborPotteryBtn = this.add.text(panelX + 140, panelY + 260, '🏺 修复陶片', {
             fontSize: '14px', fontFamily: 'Microsoft YaHei', color: '#8b7355',
             backgroundColor: '#3d2817', padding: { x: 14, y: 8 }
-        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-        this.laborPotteryBtn.on('pointerdown', () => this.doPotteryJob());
+            }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        this.laborPotteryBtn.on('pointerdown', () => { this.audio.click(); this.doPotteryJob(); });
+        this.addButtonEffects(this.laborPotteryBtn);
 
         this.laborPotteryLabel = this.add.text(panelX + 140, panelY + 288, '¥800~1200  |  需要声望 Lv.1', {
             fontSize: '11px', fontFamily: 'Microsoft YaHei', color: '#8b7355'
@@ -388,17 +401,23 @@ class MainScene extends Phaser.Scene {
             fontSize: '16px', fontFamily: 'Microsoft YaHei', color: '#f5e6d3',
             backgroundColor: '#5a3d7a', padding: { x: 20, y: 10 }
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-        prestigeBtn.on('pointerdown', () => this.doPrestige());
+        prestigeBtn.on('pointerdown', () => { if (this.audio) this.audio.click(); this.doPrestige(); });
+        this.addButtonEffects(prestigeBtn, 1.06);
         prestigeBtn.on('pointerover', () => {
             if (this.state.jackpotPointsThisRun >= 5) this.showPrestigeTooltip();
         });
         prestigeBtn.on('pointerout', () => this.hidePrestigeTooltip());
         this.prestigeBtn = prestigeBtn;
 
-        this.add.text(panelX + 140, panelY + 440, '⭐ 声望技能树', {
+        const skillBtn = this.add.text(panelX + 140, panelY + 440, '⭐ 声望技能树', {
             fontSize: '14px', fontFamily: 'Microsoft YaHei', color: '#8b7355'
         }).setOrigin(0.5).setInteractive({ useHandCursor: true })
-            .on('pointerdown', () => this.scene.start('PrestigeScene'));
+            .on('pointerdown', () => {
+                if (this.audio) this.audio.click();
+                this.cameras.main.fadeOut(300, 26, 15, 10);
+                this.time.delayedCall(300, () => this.scene.start('PrestigeScene'));
+            });
+        this.addButtonEffects(skillBtn);
     }
 
     createBottomBar() {
@@ -584,6 +603,7 @@ class MainScene extends Phaser.Scene {
     finishCleanJob() {
         const earn = Phaser.Math.Between(300, 500);
         this.economy.addFunds(earn);
+        if (this.audio) this.audio.jobComplete();
 
         if (this.cleanHintText) this.cleanHintText.setText(`✅ 完成！+¥${earn}`);
 
@@ -692,6 +712,7 @@ class MainScene extends Phaser.Scene {
         if (crack.repaired) return;
         crack.repaired = true;
         this.potteryFixed++;
+        if (this.audio) this.audio.click();
 
         // 视觉效果
         gfx.clear();
@@ -728,6 +749,7 @@ class MainScene extends Phaser.Scene {
     finishPotteryJob() {
         const earn = Phaser.Math.Between(800, 1200);
         this.economy.addFunds(earn);
+        if (this.audio) this.audio.jobComplete();
 
         if (this.potteryBaseText) this.potteryBaseText.setText(`✅ 修复完成！+¥${earn}`);
         if (this.potteryPctText) this.potteryPctText.setText('已修复: 6/6 ✅');
@@ -823,6 +845,7 @@ class MainScene extends Phaser.Scene {
             return;
         }
         this.state.currentEra = eraId;
+        if (this.audio) this.audio.click();
         this.updateEraButtons();
         this.refreshSiteButtons();
         this.drawSoilPreview();
@@ -897,13 +920,13 @@ class MainScene extends Phaser.Scene {
     updateEraButtons() {
         const unlockedEras = this.prestigeManager.getUnlockedEras();
         this.eraButtons.forEach(({ btn, era }) => {
-            const isUnlocked = unlockedEras.includes(era.id);
+            // debug模式全解锁
+            const isUnlocked = GameConfig.debug || unlockedEras.includes(era.id);
             const isSelected = this.state.currentEra === era.id;
             btn.setStyle({
                 color: isSelected ? '#d4a574' : (isUnlocked ? '#8b7355' : '#555555'),
                 backgroundColor: isSelected ? '0x3d2817' : '0x2c1810'
             });
-            // 不移除整个交互组件，只换事件
             btn.off('pointerdown');
             btn.off('pointerover');
             btn.off('pointerout');
@@ -938,6 +961,7 @@ class MainScene extends Phaser.Scene {
         this.economy.spendFunds(cost);
         this.state.totalExcavations++;
         this.state.currentSite = site;
+        if (this.audio) this.audio.purchase();
         this.updateUI();
 
         // 生成文物
@@ -985,13 +1009,6 @@ class MainScene extends Phaser.Scene {
 
         // 进度条
         this.createProgressUI();
-
-        // 提示
-        const ex = this.config.excavation;
-        this.hintText = this.add.text(ex.x + ex.width / 2, ex.y + ex.height - 42,
-            '🖱️ 在探方内拖动鼠标刮开土层', {
-                fontSize: '14px', fontFamily: 'Microsoft YaHei', color: '#8b7355'
-            }).setOrigin(0.5).setDepth(21);
 
         const eraData = EraData[this.state.currentEra];
         this.showMessage(`开始发掘 ${eraData.name} · ${site.name}`);
@@ -1134,6 +1151,8 @@ class MainScene extends Phaser.Scene {
         const layer = this.soilLayers[this.currentLayer];
         if (!layer || layer.remaining <= 0) return;
 
+        if (this.audio) this.audio.dig();
+
         const baseDigPower = 1.5;
         const rangeBonus = this.state.getUpgradeEffect('brushSize');
         const speedBonus = this.state.getUpgradeEffect('excavationSpeed');
@@ -1186,16 +1205,13 @@ class MainScene extends Phaser.Scene {
         }
         this.drawArtifactOutline(Math.min(1, artifactAlpha));
 
-        if (!this.isRevealed && this.hintText) {
-            const layerName = this.soilLayers[this.currentLayer]
-                ? this.soilLayers[this.currentLayer].name : '生土层';
-            this.hintText.setText(`🖱️ 刮除${layerName}...`);
-        }
+
     }
 
     showLayerTransition(nextLayer) {
         const ex = this.config.excavation;
         this.cameras.main.flash(100, 40, 30, 5);
+        if (this.audio) this.audio.layerBreak();
         // 显示进入新地层提示
         const label = this.add.text(ex.x + ex.width / 2, ex.y + ex.height / 2,
             `▼ ${nextLayer.name} ▼\n${nextLayer.desc}`, {
@@ -1336,6 +1352,7 @@ class MainScene extends Phaser.Scene {
     maybeSmallFind() {
         const chance = this.currentLayer === 1 ? 0.5 : 0.75;
         if (Math.random() > chance) return;
+        if (this.audio) this.audio.smallFind();
 
         const era = this.state.currentEra;
         let finds;
@@ -1414,11 +1431,6 @@ class MainScene extends Phaser.Scene {
         if (this.progressFill) this.progressFill.destroy();
         this.progressFill = this.add.graphics().setDepth(21);
 
-        if (this.progressText) this.progressText.destroy();
-        this.progressText = this.add.text(ex.x + ex.width / 2, barY - 12,
-            '🔍 开始刮土...', {
-                fontSize: '13px', fontFamily: 'Microsoft YaHei', color: '#d4a574'
-            }).setOrigin(0.5).setDepth(21);
     }
 
     updateProgress() {
@@ -1455,9 +1467,6 @@ class MainScene extends Phaser.Scene {
             }
         }
 
-        if (this.progressText) {
-            this.progressText.setText(this.soilLayers[this.currentLayer].desc);
-        }
     }
 
     revealArtifact() {
@@ -1467,13 +1476,15 @@ class MainScene extends Phaser.Scene {
         const rarityData = ArtifactData.rarity[this.currentArtifact.rarity];
         const isNat = this.currentArtifact.isNationalTreasure;
 
-        if (this.hintText) {
-            this.hintText.setText(isNat ? '🏛️ 国宝级文物出土！！！' : '🎉 文物出土！');
-            if (isNat) this.hintText.setColor(rarityData.color);
+        // 根据稀有度播放不同音效，发掘完成切回主界面 BGM
+        const r = this.currentArtifact.rarity;
+        if (this.audio) {
+            if (r === 'mythic') this.audio.mythic();
+            else if (r === 'legendary' || isNat) this.audio.nationalTreasure();
+            else this.audio.discover(r);
         }
-        if (this.progressText) {
-            this.progressText.setText(isNat ? `国宝现世 — ${this.currentArtifact.name}` : '文物已完全显露！');
-        }
+
+        // 发掘结束
 
         this.cameras.main.shake(600, 0.02);
         this.cameras.main.flash(300, 255, 220, 100);
@@ -1487,17 +1498,21 @@ class MainScene extends Phaser.Scene {
             onComplete: () => flash.destroy()
         });
 
-        // 大量闪光粒子庆祝出土
-        for (let i = 0; i < (isNat ? 20 : 8); i++) {
-            this.time.delayedCall(i * 80, () => {
-                const cx = ex.x + ex.width / 2;
-                const cy = ex.y + ex.height * 0.7;
-                this.spawnGlintSparkles(
-                    cx + (Math.random() - 0.5) * ex.width,
-                    cy + (Math.random() - 0.5) * ex.height * 0.6,
-                    2 + Math.floor(Math.random() * 5)
-                );
-            });
+        // 增强粒子庆祝效果
+        const cx = ex.x + ex.width / 2;
+        const cy = ex.y + ex.height * 0.7;
+        const particleColors = isNat
+            ? ['#f4d03f', '#ff6b35', '#ffeaa7', '#ffd700', '#fff8dc']
+            : (rarityData.color ? [rarityData.color, '#f4d03f', '#fff8e7'] : ['#d4a574', '#f4d03f', '#fff8e7']);
+        this.spawnCelebrationBurst(cx, cy, isNat ? 24 : 12, particleColors);
+
+        // 增强通知
+        if (isNat) {
+            this.showToastEnhanced(`国宝 ${this.currentArtifact.name} 出土！`, 'epic');
+        } else if (r === 'mythic') {
+            this.showToastEnhanced(`${this.currentArtifact.name} 传说降临！`, 'epic');
+        } else {
+            this.showToastEnhanced(`发现了 ${this.currentArtifact.name}`, 'success');
         }
 
         if (this.questionMark) {
@@ -1551,6 +1566,13 @@ class MainScene extends Phaser.Scene {
     }
 
     showAppraisalResult(result, isAuthentic, condition) {
+        // 鉴定音效
+        if (this.audio) {
+            if (result.type === 'national_treasure') this.audio.nationalTreasure();
+            else if (isAuthentic) this.audio.authentic();
+            else this.audio.fake();
+        }
+
         const modal = this.add.container(0, 0).setDepth(100);
 
         const overlay = this.add.graphics();
@@ -1646,6 +1668,7 @@ class MainScene extends Phaser.Scene {
                     fontSize: '16px', fontFamily: 'Microsoft YaHei', color: '#f5e6d3',
                     backgroundColor: '#27ae60', padding: { x: 18, y: 10 }
                 }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+            this.addButtonEffects(handOverBtn);
 
             handOverBtn.on('pointerdown', () => {
                 const jpReward = result.artifact.handOverReward || 400;
@@ -1661,6 +1684,8 @@ class MainScene extends Phaser.Scene {
                     fontSize: '16px', fontFamily: 'Microsoft YaHei', color: '#f5e6d3',
                     backgroundColor: '#8b7355', padding: { x: 18, y: 10 }
                 }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+            this.addButtonEffects(keepBtn);
+            this.addButtonEffects(keepBtn);
 
             keepBtn.on('pointerdown', () => {
                 const bonus = result.value.multiply(5);
@@ -1678,6 +1703,7 @@ class MainScene extends Phaser.Scene {
                 fontSize: '18px', fontFamily: 'Microsoft YaHei', color: '#f5e6d3',
                 backgroundColor: '#3d2817', padding: { x: 25, y: 10 }
             }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+            this.addButtonEffects(continueBtn);
 
             continueBtn.on('pointerdown', () => {
                 this.state.save();
@@ -1709,9 +1735,6 @@ class MainScene extends Phaser.Scene {
         // 清理进度UI
         if (this.progressBg) { this.progressBg.destroy(); this.progressBg = null; }
         if (this.progressFill) { this.progressFill.destroy(); this.progressFill = null; }
-        if (this.progressText) { this.progressText.destroy(); this.progressText = null; }
-        if (this.hintText) { this.hintText.destroy(); this.hintText = null; }
-
         // 清理可能残留的零活图形
         this.cleanupMinigameLeftovers();
 
@@ -1776,6 +1799,7 @@ class MainScene extends Phaser.Scene {
 
         this.economy.spendFunds(cost);
         this.state.upgrades[upgradeId]++;
+        if (this.audio) this.audio.upgrade();
         this.showMessage(`${upgradeId} 升级到 Lv.${this.state.upgrades[upgradeId]}！`, 'success');
         this.updateUI();
         this.state.save();
@@ -1789,6 +1813,7 @@ class MainScene extends Phaser.Scene {
 
         const result = this.prestigeManager.doPrestige();
         if (result.success) {
+            if (this.audio) this.audio.prestige();
             this.showPrestigeResult(result);
             this.saveManager.savePermanent();
             this.updateUI();
@@ -1832,7 +1857,8 @@ class MainScene extends Phaser.Scene {
             fontSize: '16px', fontFamily: 'Microsoft YaHei', color: '#f5e6d3',
             backgroundColor: '#3d2817', padding: { x: 30, y: 10 }
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-        continueBtn.on('pointerdown', () => modal.destroy());
+        this.addButtonEffects(continueBtn);
+        continueBtn.on('pointerdown', () => { this.audio.click(); modal.destroy(); });
         modal.add(continueBtn);
     }
 
@@ -1910,7 +1936,7 @@ class MainScene extends Phaser.Scene {
     }
 
     updateUI() {
-        if (this.fundsText) this.fundsText.setText(`¥${this.state.funds.toString()}`);
+        if (this.fundsText) this.animateNumber(this.fundsText, this.state.funds.toNumber(), '¥', this.formatMoney.bind(this));
         if (this.jpText) this.jpText.setText(`${this.state.prestigePoints} JP`);
         if (this.prestigeText) this.prestigeText.setText(`声望 Lv.${this.state.prestigeLevel}`);
 
@@ -1933,8 +1959,8 @@ class MainScene extends Phaser.Scene {
 
         // 更新升级按钮
         const panelX = 20;
-        const panelY = 90;
-        const dividerY = panelY + 55 + 5 * 32 + 10;
+        const panelY = 155;
+        const dividerY = panelY + 55 + 5 * 38 + 10;
         const upgradeTitleY = dividerY + 20;
         const upgrades = [
             { id: 'luck', name: '勘探运气', icon: 'icon_prestige' },
@@ -1947,7 +1973,7 @@ class MainScene extends Phaser.Scene {
         this.upgradeButtons.forEach(({ btn }) => btn.destroy());
         this.upgradeButtons = [];
         upgrades.forEach((upgrade, index) => {
-            const y = upgradeTitleY + 25 + index * 30;
+            const y = upgradeTitleY + 25 + index * 36;
             const btn = this.createUpgradeButton(panelX + 15, y, upgrade);
             this.upgradeButtons.push({ btn, upgrade });
         });
@@ -1970,6 +1996,123 @@ class MainScene extends Phaser.Scene {
         const g = Math.round(g1 + (g2 - g1) * t);
         const b = Math.round(b1 + (b2 - b1) * t);
         return (r << 16) | (g << 8) | b;
+    }
+
+    /** 给按钮添加 3D 按压 + hover 效果 */
+    addButtonEffects(btn, scale = 1.05) {
+        btn.on('pointerover', () => {
+            if (btn.input && btn.input.enabled) {
+                this.tweens.add({ targets: btn, scaleX: scale, scaleY: scale, duration: 80, ease: 'Back.easeOut' });
+            }
+        });
+        btn.on('pointerout', () => {
+            this.tweens.add({ targets: btn, scaleX: 1, scaleY: 1, duration: 120, ease: 'Back.easeOut' });
+        });
+        btn.on('pointerdown', () => {
+            if (btn.input && btn.input.enabled) {
+                this.tweens.add({ targets: btn, scaleX: 0.95, scaleY: 0.95, duration: 40, ease: 'Power2' });
+            }
+        });
+        btn.on('pointerup', () => {
+            this.tweens.add({ targets: btn, scaleX: 1, scaleY: 1, duration: 80, ease: 'Back.easeOut' });
+        });
+    }
+
+    /** 增强版 Toast 通知 - 带边框和图标 */
+    showToastEnhanced(text, type = 'info') {
+        const colors = {
+            success: { bg: 0x1a3a1a, border: 0x27ae60, icon: '✅ ' },
+            error: { bg: 0x3a1a1a, border: 0xc0392b, icon: '❌ ' },
+            gold: { bg: 0x2a2010, border: 0xf4d03f, icon: '💰 ' },
+            info: { bg: 0x1a1a2a, border: 0x3498db, icon: '💡 ' },
+            epic: { bg: 0x2a1a3a, border: 0x9b59b6, icon: '✨ ' },
+            default: { bg: 0x2c1810, border: 0xd4a574, icon: '' }
+        };
+        const style = colors[type] || colors['default'];
+        const display = style.icon + text;
+
+        const toast = this.add.text(this.config.width / 2, 60, display, {
+            fontSize: '18px', fontFamily: 'Microsoft YaHei', color: '#f5e6d3',
+            backgroundColor: '#' + style.bg.toString(16).padStart(6, '0'),
+            padding: { x: 20, y: 12 },
+            stroke: '#' + style.border.toString(16).padStart(6, '0'),
+            strokeThickness: 2
+        }).setOrigin(0.5).setDepth(60).setAlpha(0);
+
+        this.tweens.add({
+            targets: toast, alpha: 1, duration: 200, ease: 'Power2',
+            onComplete: () => {
+                this.tweens.add({
+                    targets: toast, alpha: 0, y: toast.y - 30,
+                    duration: 1500, delay: 1200, ease: 'Power2',
+                    onComplete: () => toast.destroy()
+                });
+            }
+        });
+    }
+
+    /** 简写金额: ¥1.5K / ¥2.3M / ¥4.5B / ¥1.2T */
+    formatMoney(value) {
+        if (value >= 1e12) return (value / 1e12).toFixed(1) + 'T';
+        if (value >= 1e9) return (value / 1e9).toFixed(1) + 'B';
+        if (value >= 1e6) return (value / 1e6).toFixed(1) + 'M';
+        if (value >= 1e3) return (value / 1e3).toFixed(1) + 'K';
+        return Math.floor(value).toLocaleString();
+    }
+
+    /** 数字滚动动画 */
+    animateNumber(targetText, newValue, prefix = '', formatFn = null) {
+        const currentText = targetText.text.replace(prefix, '').replace(/[,KMBT]/g, '');
+        const current = parseFloat(currentText) || 0;
+        const target = parseFloat(newValue) || 0;
+        if (current === target) return;
+
+        const duration = Math.min(800, Math.abs(target - current) * 2 + 200);
+
+        this.tweens.addCounter({
+            from: current,
+            to: target,
+            duration: duration,
+            ease: 'Power2',
+            onUpdate: function (tween) {
+                const val = Math.round(tween.getValue());
+                targetText.setText(prefix + val.toLocaleString());
+            },
+            onComplete: function () {
+                if (formatFn) {
+                    targetText.setText(prefix + formatFn(target));
+                }
+            }
+        });
+    }
+
+    /** 文物出土时的增强粒子效果 */
+    spawnCelebrationBurst(x, y, count, colors) {
+        for (let i = 0; i < count; i++) {
+            this.time.delayedCall(i * 30, () => {
+                const angle = (i / count) * Math.PI * 2 + Math.random() * 0.5;
+                const dist = 40 + Math.random() * 80;
+                const color = colors[Math.floor(Math.random() * colors.length)];
+
+                const g = this.add.graphics().setDepth(30);
+                g.fillStyle(Phaser.Display.Color.HexStringToColor(color).color, 0.9);
+                const size = 2 + Math.random() * 4;
+                g.fillCircle(0, 0, size);
+                g.setPosition(x, y);
+
+                this.tweens.add({
+                    targets: g,
+                    x: x + Math.cos(angle) * dist,
+                    y: y + Math.sin(angle) * dist - 30,
+                    alpha: 0,
+                    scaleX: 0.2,
+                    scaleY: 0.2,
+                    duration: 700 + Math.random() * 400,
+                    ease: 'Power2',
+                    onComplete: () => g.destroy()
+                });
+            });
+        }
     }
 }
 

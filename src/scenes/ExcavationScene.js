@@ -10,6 +10,9 @@ class ExcavationScene extends Phaser.Scene {
     create(data) {
         this.gameState = window.gameState;
         this.economy = window.economyManager;
+        this.audio = window.audioManager;
+
+        this.cameras.main.fadeIn(400, 26, 15, 10);
 
         this.era = (data && data.era) ? data.era : this.gameState.currentEra;
         this.eraData = EraData[this.era];
@@ -299,7 +302,9 @@ class ExcavationScene extends Phaser.Scene {
             if (!this.isCompleted) {
                 this.gameState.save();
             }
-            this.scene.start('MainScene');
+            if (this.audio) this.audio.click();
+            this.cameras.main.fadeOut(300, 26, 15, 10);
+            this.time.delayedCall(300, () => this.scene.start('MainScene'));
         });
 
         // 标题
@@ -319,12 +324,6 @@ class ExcavationScene extends Phaser.Scene {
 
         this.progressFill = this.add.graphics().setDepth(21);
 
-        this.progressText = this.add.text(this.config.width / 2, barY + 22,
-            '🔍 点击探方开始刮土', {
-                fontSize: '14px', fontFamily: 'Microsoft YaHei',
-                color: '#8b7355'
-            }).setOrigin(0.5).setDepth(21);
-
         // 工具状态栏
         const toolY = barY + 48;
         this.toolText = this.add.text(ex.x, toolY, '', {
@@ -332,13 +331,6 @@ class ExcavationScene extends Phaser.Scene {
             color: '#a08060'
         }).setDepth(21);
         this.updateToolText();
-
-        // 底部提示
-        this.hintText = this.add.text(this.config.width / 2, this.config.height - 30,
-            '🖱️ 点击探方，用手铲刮开土层', {
-                fontSize: '15px', fontFamily: 'Microsoft YaHei',
-                color: '#8b7355'
-            }).setOrigin(0.5).setDepth(21);
 
         // 发掘进度（覆盖在探方右下角）
         this.overlayPct = this.add.text(
@@ -466,13 +458,8 @@ class ExcavationScene extends Phaser.Scene {
         }
         this.drawArtifactOutline(Math.min(1, artifactAlpha));
 
-        // 更新提示
+        // 更新进度
         const pct = Math.min(100, Math.floor(this.getProgress() * 100));
-        if (!this.isRevealed) {
-            const layerName = this.soilLayers[this.currentLayer] ?
-                this.soilLayers[this.currentLayer].name : '生土层';
-            this.hintText.setText(`🖱️ 刮除${layerName}... (${pct}%)`);
-        }
     }
 
     // ── 刮痕绘制 ──
@@ -618,10 +605,6 @@ class ExcavationScene extends Phaser.Scene {
             });
         }
 
-        this.progressText.setText(
-            `挖掘进度: ${Math.floor(pct * 100)}% — ${this.soilLayers[this.currentLayer].desc}`
-        );
-
         // 探方内百分比
         this.overlayPct.setText(`${Math.floor(pct * 100)}%`);
         this.overlayPct.setAlpha(0.2 + pct * 0.4);
@@ -632,8 +615,7 @@ class ExcavationScene extends Phaser.Scene {
         this.isRevealed = true;
         this.isCompleted = true;
 
-        this.hintText.setText('🎉 文物出土！');
-        this.progressText.setText('文物已完全显露！');
+
 
         // 震动
         this.cameras.main.shake(600, 0.01);
@@ -829,7 +811,10 @@ class ExcavationScene extends Phaser.Scene {
                 this.showToast(`感谢奉献！获得 ${jpReward} 基金点`);
                 this.gameState.save();
                 modal.destroy();
-                this.time.delayedCall(1500, () => this.scene.start('MainScene'));
+                this.time.delayedCall(1500, () => {
+                    this.cameras.main.fadeOut(300, 26, 15, 10);
+                    this.time.delayedCall(300, () => this.scene.start('MainScene'));
+                });
             });
 
             const keepBtn = this.add.text(this.config.width / 2 + 110, btnY, '私人收藏 (5×拍卖)', {
@@ -844,7 +829,10 @@ class ExcavationScene extends Phaser.Scene {
                 this.showToast(`拍卖成功！额外获得 ¥${bonus.toString()}`);
                 this.gameState.save();
                 modal.destroy();
-                this.time.delayedCall(1500, () => this.scene.start('MainScene'));
+                this.time.delayedCall(1500, () => {
+                    this.cameras.main.fadeOut(300, 26, 15, 10);
+                    this.time.delayedCall(300, () => this.scene.start('MainScene'));
+                });
             });
 
             modal.add(handOverBtn);
@@ -859,7 +847,8 @@ class ExcavationScene extends Phaser.Scene {
             continueBtn.on('pointerdown', () => {
                 this.gameState.save();
                 modal.destroy();
-                this.scene.start('MainScene');
+                this.cameras.main.fadeOut(300, 26, 15, 10);
+                this.time.delayedCall(300, () => this.scene.start('MainScene'));
             });
             modal.add(continueBtn);
         }
