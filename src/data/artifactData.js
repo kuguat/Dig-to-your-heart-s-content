@@ -31,14 +31,14 @@ const ArtifactData = {
             id: 'neolithic_pottery_bowl',
             name: '人面鱼纹彩陶盆',
             era: 'neolithic', type: 'pottery', rarity: 'rare',
-            baseValue: 5000, authenticity: 0.8, hasFragments: false,
+            baseValue: 8000, authenticity: 0.82, hasFragments: false,
             description: '仰韶文化代表器物，盆内绘有人面鱼纹，象征生死轮回',
             funFact: '这种人面鱼纹可能是巫师的面具，用于祈求丰收'
         },
         {
             id: 'neolithic_jade_axe', name: '玉琮',
             era: 'neolithic', type: 'jade', rarity: 'epic',
-            baseValue: 50000, authenticity: 0.6, hasFragments: true,
+            baseValue: 50000, authenticity: 0.65, hasFragments: true,
             description: '良渚文化玉器之冠，内圆外方，象征天圆地方',
             funFact: '玉琮是良渚先民沟通天地的礼器'
         },
@@ -54,31 +54,37 @@ const ArtifactData = {
         {
             id: 'neolithic_bone_needle', name: '骨针',
             era: 'neolithic', type: 'bone', rarity: 'common',
-            baseValue: 100, authenticity: 0.95, hasFragments: false,
+            baseValue: 400, authenticity: 0.96, hasFragments: false,
             description: '缝制衣物的重要工具，骨针的出现标志着纺织业的萌芽'
         },
         {
             id: 'neolithic_stone_knife', name: '石刀',
             era: 'neolithic', type: 'stone', rarity: 'common',
-            baseValue: 200, authenticity: 0.9, hasFragments: false,
+            baseValue: 450, authenticity: 0.93, hasFragments: false,
             description: '新石器时代常见工具，用于收割农作物'
+        },
+        {
+            id: 'neolithic_pottery_shard', name: '彩陶残片',
+            era: 'neolithic', type: 'pottery', rarity: 'common',
+            baseValue: 350, authenticity: 0.94, hasFragments: false,
+            description: '仰韶文化彩陶碎片，纹饰依稀可见，虽不完整但仍有研究价值'
         },
         {
             id: 'neolithic_jade_bi', name: '玉璧',
             era: 'neolithic', type: 'jade_bi', rarity: 'uncommon',
-            baseValue: 2000, authenticity: 0.7, hasFragments: true,
+            baseValue: 2500, authenticity: 0.75, hasFragments: true,
             description: '天圆地方的宇宙观象征，多用于祭祀'
         },
         {
             id: 'neolithic_pottery_jug', name: '小口尖底瓶',
             era: 'neolithic', type: 'pottery', rarity: 'uncommon',
-            baseValue: 1500, authenticity: 0.85, hasFragments: false,
+            baseValue: 2000, authenticity: 0.88, hasFragments: false,
             description: '汲水工具，设计巧妙，可自动立起'
         },
         {
             id: 'neolithic_stone_roller', name: '石磨盘',
             era: 'neolithic', type: 'stone', rarity: 'common',
-            baseValue: 300, authenticity: 0.9, hasFragments: false,
+            baseValue: 500, authenticity: 0.93, hasFragments: false,
             description: '加工粮食的重要工具，原始农业的见证'
         },
         {
@@ -93,7 +99,7 @@ const ArtifactData = {
         {
             id: 'neolithic_pottery_wave', name: '波浪纹陶罐',
             era: 'neolithic', type: 'pottery', rarity: 'uncommon',
-            baseValue: 1800, authenticity: 0.8, hasFragments: false,
+            baseValue: 2200, authenticity: 0.84, hasFragments: false,
             description: '马家窑文化代表，线条流畅如水波'
         }
     ],
@@ -131,19 +137,19 @@ const ArtifactData = {
         {
             id: 'shangzhou_bronze_ge', name: '青铜戈',
             era: 'shangzhou', type: 'bronze', rarity: 'common',
-            baseValue: 500, authenticity: 0.85, hasFragments: false,
+            baseValue: 3500, authenticity: 0.88, hasFragments: false,
             description: '商周时期常见兵器'
         },
         {
             id: 'shangzhou_pottery_li', name: '印纹硬陶罐',
             era: 'shangzhou', type: 'pottery', rarity: 'uncommon',
-            baseValue: 3000, authenticity: 0.75, hasFragments: false,
+            baseValue: 5000, authenticity: 0.78, hasFragments: false,
             description: '商代日常生活用器'
         },
         {
             id: 'shangzhou_jade_huang', name: '玉璜',
             era: 'shangzhou', type: 'jade', rarity: 'uncommon',
-            baseValue: 4000, authenticity: 0.7, hasFragments: false,
+            baseValue: 6000, authenticity: 0.72, hasFragments: false,
             description: '祭祀用玉器，形如半璧'
         },
         {
@@ -216,7 +222,7 @@ const ArtifactData = {
         {
             id: 'qinhan_bronze_mirror', name: '日光铜镜',
             era: 'qinhan', type: 'bronze', rarity: 'uncommon',
-            baseValue: 8000, authenticity: 0.75, hasFragments: false,
+            baseValue: 25000, authenticity: 0.78, hasFragments: false,
             description: '汉代日常用品，镜背铭文"见日之光，天下大明"'
         },
         {
@@ -229,7 +235,7 @@ const ArtifactData = {
         {
             id: 'qinhan_half_liang', name: '秦半两钱',
             era: 'qinhan', type: 'bronze', rarity: 'common',
-            baseValue: 2000, authenticity: 0.9, hasFragments: false,
+            baseValue: 30000, authenticity: 0.92, hasFragments: false,
             description: '秦始皇统一货币的见证，外圆内方'
         },
         {
@@ -244,7 +250,7 @@ const ArtifactData = {
         {
             id: 'qinhan_bird_seal', name: '封泥印章',
             era: 'qinhan', type: 'bronze', rarity: 'uncommon',
-            baseValue: 6000, authenticity: 0.8, hasFragments: false,
+            baseValue: 20000, authenticity: 0.82, hasFragments: false,
             description: '古代文书封印之物，印面刻有官署名',
             funFact: '封泥是古代"快递"的防拆封条'
         }
@@ -305,20 +311,20 @@ const ArtifactData = {
         {
             id: 'tang_gold_hairpin', name: '金凤钗',
             era: 'tang', type: 'gold', rarity: 'uncommon',
-            baseValue: 30000, authenticity: 0.7, hasFragments: false,
+            baseValue: 120000, authenticity: 0.72, hasFragments: false,
             description: '唐代贵妇头饰，凤形展翅，工艺精湛'
         },
         {
             id: 'tang_porcelain_bowl', name: '邢窑白瓷碗',
             era: 'tang', type: 'porcelain', rarity: 'uncommon',
-            baseValue: 20000, authenticity: 0.75, hasFragments: false,
+            baseValue: 100000, authenticity: 0.78, hasFragments: false,
             description: '唐代"南青北白"中白瓷的代表，胎质细腻',
             funFact: '唐代白瓷的出现为后世青花瓷奠定了基础'
         },
         {
             id: 'tang_kaiyuan_coin', name: '开元通宝',
             era: 'tang', type: 'bronze', rarity: 'common',
-            baseValue: 3000, authenticity: 0.88, hasFragments: false,
+            baseValue: 100000, authenticity: 0.9, hasFragments: false,
             description: '唐代标准货币，流通近三百年',
             funFact: '"开元通宝"四字由书法家欧阳询题写'
         }
@@ -384,7 +390,7 @@ const ArtifactData = {
         {
             id: 'song_ding_ware', name: '定窑刻花碗',
             era: 'songyuan', type: 'porcelain', rarity: 'uncommon',
-            baseValue: 40000, authenticity: 0.7, hasFragments: false,
+            baseValue: 500000, authenticity: 0.72, hasFragments: false,
             description: '宋代白瓷之冠，刻花流畅如行云流水'
         },
         {
@@ -396,7 +402,7 @@ const ArtifactData = {
         {
             id: 'song_compass', name: '指南鱼',
             era: 'songyuan', type: 'bronze', rarity: 'uncommon',
-            baseValue: 15000, authenticity: 0.75, hasFragments: false,
+            baseValue: 300000, authenticity: 0.78, hasFragments: false,
             description: '宋代人工磁化指南工具，是世界最早的指南针实物之一',
             funFact: '宋代人将铁片摩擦磁石后制成鱼形，浮于水面即可指南'
         }
@@ -461,7 +467,7 @@ const ArtifactData = {
         {
             id: 'ming_copper_coin', name: '洪武通宝',
             era: 'mingqing', type: 'bronze', rarity: 'common',
-            baseValue: 5000, authenticity: 0.85, hasFragments: false,
+            baseValue: 25000000, authenticity: 0.9, hasFragments: false,
             description: '明太祖朱元璋铸造的开国钱币'
         },
         {
