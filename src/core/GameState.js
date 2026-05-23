@@ -46,6 +46,9 @@ class GameState {
         // 本局获得的基金点
         this.jackpotPointsThisRun = 0;
 
+        // 本局收获的金钱
+        this.earningsThisRun = 0;
+
         // 转生次数
         this.prestigeCount = 0;
     }
@@ -103,16 +106,17 @@ class GameState {
         return 50;
     }
 
-    // 计算文物价值
+    // 计算文物价值（含转生永久加成）
     calculateArtifactValue(baseValue, rarity, condition) {
         const rarityMult = ArtifactData.rarity[rarity].multiplier;
         const conditionMult = ArtifactData.condition[condition].valueMult;
         const valueBonus = this.getUpgradeEffect('artifactValue');
+        const prestigeBonus = window.prestigeManager ? window.prestigeManager.getPermanentBonus('artifactValue') : 0;
 
         let value = new BigNumber(baseValue)
             .multiply(rarityMult)
             .multiply(conditionMult)
-            .multiply(1 + valueBonus);
+            .multiply(1 + valueBonus + prestigeBonus);
 
         return value;
     }
@@ -149,7 +153,14 @@ class GameState {
 
         try {
             const data = JSON.parse(saved);
-            this.funds = new BigNumber(data.funds.mantissa, data.funds.exponent);
+            // 处理旧存档格式：funds 可能是数字
+            if (typeof data.funds === 'number') {
+                this.funds = new BigNumber(data.funds);
+            } else if (data.funds && typeof data.funds.mantissa !== 'undefined') {
+                this.funds = new BigNumber(data.funds.mantissa, data.funds.exponent);
+            } else {
+                this.funds = new BigNumber(10000);
+            }
             this.prestigePoints = data.prestigePoints || 0;
             this.totalExcavations = data.totalExcavations || 0;
             this.totalArtifactsFound = data.totalArtifactsFound || 0;
@@ -157,7 +168,13 @@ class GameState {
             this.totalFakesFound = data.totalFakesFound || 0;
             this.totalNationalTreasures = data.totalNationalTreasures || 0;
             this.upgrades = data.upgrades || this.upgrades;
-            this.prestigeLevel = data.prestigeLevel || 0;
+            // 安全处理声望等级：如果存档有越界的等级，重置为 0
+            let lv = data.prestigeLevel || 0;
+            if (typeof lv !== 'number' || lv < 0 || lv > 5) {
+                console.warn('GameState.load: prestigeLevel 越界 (' + lv + ')，重置为 0');
+                lv = 0;
+            }
+            this.prestigeLevel = lv;
             this.prestigeCount = data.prestigeCount || 0;
             this.discoveredArtifactIds = new Set(data.discoveredArtifactIds || []);
             return true;

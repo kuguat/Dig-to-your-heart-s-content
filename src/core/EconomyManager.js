@@ -20,11 +20,11 @@ class EconomyManager {
     addFunds(amount) {
         const amountBN = amount instanceof BigNumber ? amount : new BigNumber(amount);
         this.gameState.funds = this.gameState.funds.add(amountBN);
+        this.gameState.earningsThisRun += amountBN.toNumber();
     }
 
-    // 添加基金点
+    // 添加基金点（本局累积，需通过提升声望/转生存入永久池）
     addPrestigePoints(points) {
-        this.gameState.prestigePoints += points;
         this.gameState.jackpotPointsThisRun += points;
     }
 

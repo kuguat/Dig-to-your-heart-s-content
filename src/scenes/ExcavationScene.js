@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 发掘场景 - 探方分层刮面法
  * 模拟真实考古：地层剖面 + 逐层刮土 + 文物逐渐浮现
  */
@@ -8,20 +8,27 @@ class ExcavationScene extends Phaser.Scene {
     }
 
     create(data) {
-        this.gameState = window.gameState;
-        this.economy = window.economyManager;
-        this.audio = window.audioManager;
+        try {
+            this.gameState = window.gameState;
+            this.economy = window.economyManager;
+            this.audio = window.audioManager;
 
-        this.cameras.main.fadeIn(400, 26, 15, 10);
+            if (!this.gameState || !this.economy) {
+                console.error('ExcavationScene: 管理器缺失，返回主界面');
+                this.scene.start('MainScene');
+                return;
+            }
 
-        this.era = (data && data.era) ? data.era : this.gameState.currentEra;
-        this.eraData = EraData[this.era];
-        this.site = (data && data.site) ? data.site : (this.eraData ? this.eraData.sites[0] : null);
+            this.cameras.main.fadeIn(400, 26, 15, 10);
 
-        if (!this.eraData || !this.site) {
-            this.scene.start('MainScene');
-            return;
-        }
+            this.era = (data && data.era) ? data.era : this.gameState.currentEra;
+            this.eraData = EraData[this.era];
+            this.site = (data && data.site) ? data.site : (this.eraData ? this.eraData.sites[0] : null);
+
+            if (!this.eraData || !this.site) {
+                this.scene.start('MainScene');
+                return;
+            }
 
         // 生成随机文物
         this.currentArtifact = ArtifactData.getRandomArtifactForSite(this.era, this.site.risk);
@@ -44,6 +51,10 @@ class ExcavationScene extends Phaser.Scene {
 
         // 入场动画
         this.playEntryAnimation();
+        } catch (e) {
+            console.error('ExcavationScene.create 错误:', e);
+            this.scene.start('MainScene');
+        }
     }
 
     // ── 地层数据 ──
@@ -125,8 +136,8 @@ class ExcavationScene extends Phaser.Scene {
             this.artifactLabel = this.add.text(
                 ex.x + ex.width / 2, ex.y + ex.height + 35,
                 `? ? ?`, {
-                    fontSize: '18px',
-                    fontFamily: 'Microsoft YaHei',
+                    fontSize: '20px',
+                    fontFamily: GameConfig.typography.fontFamily,
                     color: '#d4a574',
                     fontStyle: 'bold'
                 }
@@ -243,17 +254,38 @@ class ExcavationScene extends Phaser.Scene {
             const qAlpha = alpha < 0.15 ? 1 : 1 - (alpha - 0.15) / 0.65;
             if (this.questionMark) this.questionMark.destroy();
             this.questionMark = this.add.text(cx, cy, '?', {
-                fontSize: '48px',
-                fontFamily: 'serif',
+                fontSize: '52px',
+                fontFamily: GameConfig.typography.mysteryFont,
                 color: '#f5e6d3',
                 fontStyle: 'bold'
             }).setOrigin(0.5).setAlpha(Math.max(0.1, qAlpha * 0.8)).setDepth(12);
         } else {
-            // 文物层挖到八成以上 — 揭晓名称
+            // 文物层挖到八成以上 — 揭晓名称和图标
             if (this.questionMark) { this.questionMark.destroy(); this.questionMark = null; }
             if (this.artifactLabel) {
                 this.artifactLabel.setText(this.currentArtifact.name);
                 this.artifactLabel.setAlpha((alpha - 0.80) / 0.20);
+            }
+            // 显示文物图标 (优先个体纹理→类型纹理)
+            if (alpha >= 0.70 && !this.artifactIcon) {
+                const iconKey = this.getArtifactIconKey(this.currentArtifact);
+                console.log('[drawArtifactOutline] alpha=' + alpha.toFixed(2) + ' iconKey=' + iconKey);
+                if (iconKey) {
+                    try {
+                        this.artifactIcon = this.add.image(cx, cy - 10, iconKey)
+                            .setDisplaySize(70, 70)
+                            .setAlpha(0)
+                            .setDepth(13);
+                        this.tweens.add({
+                            targets: this.artifactIcon,
+                            alpha: 1,
+                            duration: 300
+                        });
+                        console.log('[drawArtifactOutline] 图标已添加到场景 x=' + cx + ' y=' + (cy-10) + ' alpha=0->1');
+                    } catch (e) {
+                        console.error('[drawArtifactOutline] 添加图标失败:', e);
+                    }
+                }
             }
         }
     }
@@ -272,8 +304,8 @@ class ExcavationScene extends Phaser.Scene {
             const midY = yOffset + layerHeight / 2;
 
             const label = this.add.text(labelX, midY, layer.name, {
-                fontSize: '11px',
-                fontFamily: 'Microsoft YaHei',
+                fontSize: '12px',
+                fontFamily: GameConfig.typography.fontFamily,
                 color: '#8b7355',
                 fontStyle: 'bold'
             }).setOrigin(1, 0.5).setDepth(15);
@@ -294,7 +326,7 @@ class ExcavationScene extends Phaser.Scene {
 
         // 返回按钮
         const backBtn = this.add.text(20, 30, '← 返回', {
-            fontSize: '16px', fontFamily: 'Microsoft YaHei',
+            fontSize: '17px', fontFamily: GameConfig.typography.fontFamily,
             color: '#d4a574', backgroundColor: '#3d2817',
             padding: { x: 12, y: 6 }
         }).setOrigin(0, 0.5).setInteractive({ useHandCursor: true }).setDepth(21);
@@ -310,7 +342,7 @@ class ExcavationScene extends Phaser.Scene {
         // 标题
         this.add.text(this.config.width / 2, 30,
             `${this.eraData.name} · ${this.site.name}`, {
-                fontSize: '18px', fontFamily: 'Microsoft YaHei',
+                fontSize: '20px', fontFamily: GameConfig.typography.fontFamily,
                 color: '#f5e6d3', fontStyle: 'bold'
             }).setOrigin(0.5).setDepth(21);
 
@@ -327,7 +359,7 @@ class ExcavationScene extends Phaser.Scene {
         // 工具状态栏
         const toolY = barY + 48;
         this.toolText = this.add.text(ex.x, toolY, '', {
-            fontSize: '13px', fontFamily: 'Microsoft YaHei',
+            fontSize: '15px', fontFamily: GameConfig.typography.fontFamily,
             color: '#a08060'
         }).setDepth(21);
         this.updateToolText();
@@ -336,7 +368,7 @@ class ExcavationScene extends Phaser.Scene {
         this.overlayPct = this.add.text(
             ex.x + ex.width - 15, ex.y + ex.height - 5,
             '0%', {
-                fontSize: '32px', fontFamily: 'serif',
+                fontSize: '34px', fontFamily: GameConfig.typography.mysteryFont,
                 color: '#d4a574', fontStyle: 'bold'
             }).setOrigin(1, 1).setAlpha(0.3).setDepth(15);
     }
@@ -360,7 +392,7 @@ class ExcavationScene extends Phaser.Scene {
         // 标题短暂显示
         const title = this.add.text(ex.x + ex.width/2, ex.y + ex.height/2,
             `${this.site.name}`, {
-                fontSize: '36px', fontFamily: 'Microsoft YaHei',
+                fontSize: '38px', fontFamily: GameConfig.typography.fontFamily,
                 color: '#f5e6d3', fontStyle: 'bold',
                 shadow: { offsetX: 2, offsetY: 2, color: '#000000', blur: 10, fill: true }
             }).setOrigin(0.5).setDepth(30);
@@ -552,7 +584,7 @@ class ExcavationScene extends Phaser.Scene {
 
         const toast = this.add.text(fx, fy,
             `${find.icon} 发现${find.name}！+¥${find.value}`, {
-                fontSize: '16px', fontFamily: 'Microsoft YaHei',
+                fontSize: '17px', fontFamily: GameConfig.typography.fontFamily,
                 color: '#f4d03f', fontStyle: 'bold',
                 shadow: { offsetX: 1, offsetY: 1, color: '#000000', blur: 6, fill: true }
             }).setOrigin(0.5).setDepth(30);
@@ -663,8 +695,10 @@ class ExcavationScene extends Phaser.Scene {
             return;
         }
 
+        // Lv.0 新手保护：无赝品
         const baseAuth = this.currentArtifact.authenticity;
-        const authChance = this.gameState.calculateAuthenticityChance(baseAuth);
+        const authChance = this.gameState.prestigeLevel === 0 ? 1.0
+            : this.gameState.calculateAuthenticityChance(baseAuth);
         const isAuthentic = Math.random() < authChance;
 
         const conditionRoll = Math.random();
@@ -728,79 +762,110 @@ class ExcavationScene extends Phaser.Scene {
 
         // 标题
         modal.add(this.add.text(this.config.width / 2, py + 40, resultTitle, {
-            fontSize: '28px', fontFamily: 'Microsoft YaHei',
+            fontSize: '30px', fontFamily: GameConfig.typography.fontFamily,
             color: titleColor, fontStyle: 'bold'
         }).setOrigin(0.5));
 
+        // 文物图标 (优先个体纹理→类型纹理)
+        const iconKey = this.getArtifactIconKey(result.artifact);
+        console.log('[showAppraisalResult] iconKey=' + iconKey + ' artifact=' + (result.artifact ? result.artifact.id : 'null') + ' type=' + (result.artifact ? result.artifact.type : 'null'));
+        let nameY = py + 85;
+        if (iconKey) {
+            try {
+                const img = this.add.image(this.config.width / 2, py + 75, iconKey).setDisplaySize(60, 60).setDepth(101);
+                modal.add(img);
+                nameY = py + 120;
+                console.log('[showAppraisalResult] 图标已添加到弹窗');
+            } catch (e) {
+                console.error('[showAppraisalResult] 添加图标失败:', e);
+            }
+        }
+
         // 文物名称
-        modal.add(this.add.text(this.config.width / 2, py + 85, result.artifact.name, {
-            fontSize: '22px', fontFamily: 'Microsoft YaHei',
+        modal.add(this.add.text(this.config.width / 2, nameY, result.artifact.name, {
+            fontSize: '26px', fontFamily: GameConfig.typography.fontFamily,
             color: '#f5e6d3'
         }).setOrigin(0.5));
 
         // 稀有度
         const rarityData = ArtifactData.rarity[result.artifact.rarity];
-        modal.add(this.add.text(this.config.width / 2, py + 120,
+        const rarityY = this.textures.exists(iconKey) ? py + 150 : py + 120;
+        modal.add(this.add.text(this.config.width / 2, rarityY,
             `[${rarityData.name}] ×${rarityData.multiplier}`, {
-                fontSize: '16px', fontFamily: 'Microsoft YaHei',
+                fontSize: '17px', fontFamily: GameConfig.typography.fontFamily,
                 color: rarityData.color
             }).setOrigin(0.5));
 
         // 品相
+        const condY = rarityY + 30;
         if (isAuthentic) {
             const condData = ArtifactData.condition[condition];
-            modal.add(this.add.text(this.config.width / 2, py + 150,
+            modal.add(this.add.text(this.config.width / 2, condY,
                 `品相: ${condData.name} (×${condData.valueMult})`, {
-                    fontSize: '14px', fontFamily: 'Microsoft YaHei',
+                    fontSize: '15px', fontFamily: GameConfig.typography.fontFamily,
                     color: '#8b7355'
                 }).setOrigin(0.5));
         }
 
         // 获得经费
+        const valueY = condY + 50;
         if (result.value.greaterThan(new BigNumber(0))) {
             if (isAuthentic) {
-                modal.add(this.add.text(this.config.width / 2, py + 200,
+                modal.add(this.add.text(this.config.width / 2, valueY,
                     `💰 获得经费: ¥${result.value.toString()}`, {
-                        fontSize: '26px', fontFamily: 'Microsoft YaHei',
+                        fontSize: '30px', fontFamily: GameConfig.typography.fontFamily,
                         color: '#f4d03f', fontStyle: 'bold'
                     }).setOrigin(0.5));
             } else {
-                modal.add(this.add.text(this.config.width / 2, py + 200,
+                modal.add(this.add.text(this.config.width / 2, valueY,
                     `🔧 报销材料费: ¥${result.value.toString()}`, {
-                        fontSize: '18px', fontFamily: 'Microsoft YaHei',
+                        fontSize: '20px', fontFamily: GameConfig.typography.fontFamily,
                         color: '#8b7355'
                     }).setOrigin(0.5));
             }
         }
 
         // 描述
-        modal.add(this.add.text(this.config.width / 2, py + 250, result.artifact.description, {
-            fontSize: '13px', fontFamily: 'Microsoft YaHei',
+        const descY = valueY + 50;
+        modal.add(this.add.text(this.config.width / 2, descY, result.artifact.description, {
+            fontSize: '15px', fontFamily: GameConfig.typography.fontFamily,
             color: '#a08060', align: 'center',
             wordWrap: { width: pw - 60 }
         }).setOrigin(0.5));
 
         // 冷知识
+        const funY = descY + 35;
         if (result.artifact.funFact) {
-            modal.add(this.add.text(this.config.width / 2, py + 285,
+            modal.add(this.add.text(this.config.width / 2, funY,
                 `💬 ${result.artifact.funFact}`, {
-                    fontSize: '12px', fontFamily: 'Microsoft YaHei',
+                    fontSize: '15px', fontFamily: GameConfig.typography.fontFamily,
                     color: '#8b7355', fontStyle: 'italic', align: 'center',
                     wordWrap: { width: pw - 60 }
                 }).setOrigin(0.5));
         }
 
         // ── 国宝抉择 ──
+        const choiceY = funY + 40;
+        let modalClosed = false;
+        const safeCloseModal = (callback) => {
+            if (modalClosed) return;
+            modalClosed = true;
+            this.time.delayedCall(60, () => {
+                if (modal && modal.active) modal.destroy();
+                if (callback) this.time.delayedCall(10, callback);
+            });
+        };
+
         if (result.type === 'national_treasure') {
-            modal.add(this.add.text(this.config.width / 2, py + 325, '🏛️ 国宝级文物，请做抉择:', {
-                fontSize: '14px', fontFamily: 'Microsoft YaHei',
+            modal.add(this.add.text(this.config.width / 2, choiceY, '🏛️ 国宝级文物，请做抉择:', {
+                fontSize: '15px', fontFamily: GameConfig.typography.fontFamily,
                 color: '#d4a574'
             }).setOrigin(0.5));
 
-            const btnY = py + 365;
+            const btnY = choiceY + 40;
 
             const handOverBtn = this.add.text(this.config.width / 2 - 110, btnY, `上交国家 (+${result.artifact.handOverReward || 400}JP)`, {
-                fontSize: '16px', fontFamily: 'Microsoft YaHei',
+                fontSize: '17px', fontFamily: GameConfig.typography.fontFamily,
                 color: '#f5e6d3', backgroundColor: '#27ae60',
                 padding: { x: 18, y: 10 }
             }).setOrigin(0.5).setInteractive({ useHandCursor: true });
@@ -810,15 +875,14 @@ class ExcavationScene extends Phaser.Scene {
                 this.economy.addPrestigePoints(jpReward);
                 this.showToast(`感谢奉献！获得 ${jpReward} 基金点`);
                 this.gameState.save();
-                modal.destroy();
-                this.time.delayedCall(1500, () => {
+                safeCloseModal(() => {
                     this.cameras.main.fadeOut(300, 26, 15, 10);
                     this.time.delayedCall(300, () => this.scene.start('MainScene'));
                 });
             });
 
             const keepBtn = this.add.text(this.config.width / 2 + 110, btnY, '私人收藏 (5×拍卖)', {
-                fontSize: '16px', fontFamily: 'Microsoft YaHei',
+                fontSize: '17px', fontFamily: GameConfig.typography.fontFamily,
                 color: '#f5e6d3', backgroundColor: '#8b7355',
                 padding: { x: 18, y: 10 }
             }).setOrigin(0.5).setInteractive({ useHandCursor: true });
@@ -828,8 +892,7 @@ class ExcavationScene extends Phaser.Scene {
                 this.economy.addFunds(bonus);
                 this.showToast(`拍卖成功！额外获得 ¥${bonus.toString()}`);
                 this.gameState.save();
-                modal.destroy();
-                this.time.delayedCall(1500, () => {
+                safeCloseModal(() => {
                     this.cameras.main.fadeOut(300, 26, 15, 10);
                     this.time.delayedCall(300, () => this.scene.start('MainScene'));
                 });
@@ -839,16 +902,17 @@ class ExcavationScene extends Phaser.Scene {
             modal.add(keepBtn);
         } else {
             const continueBtn = this.add.text(this.config.width / 2, py + 390, '继续游戏 →', {
-                fontSize: '18px', fontFamily: 'Microsoft YaHei',
+                fontSize: '20px', fontFamily: GameConfig.typography.fontFamily,
                 color: '#f5e6d3', backgroundColor: '#3d2817',
                 padding: { x: 25, y: 10 }
             }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
             continueBtn.on('pointerdown', () => {
                 this.gameState.save();
-                modal.destroy();
-                this.cameras.main.fadeOut(300, 26, 15, 10);
-                this.time.delayedCall(300, () => this.scene.start('MainScene'));
+                safeCloseModal(() => {
+                    this.cameras.main.fadeOut(300, 26, 15, 10);
+                    this.time.delayedCall(300, () => this.scene.start('MainScene'));
+                });
             });
             modal.add(continueBtn);
         }
@@ -856,7 +920,7 @@ class ExcavationScene extends Phaser.Scene {
 
     showToast(text) {
         const toast = this.add.text(this.config.width / 2, this.config.height / 2, text, {
-            fontSize: '20px', fontFamily: 'Microsoft YaHei',
+            fontSize: '26px', fontFamily: GameConfig.typography.fontFamily,
             color: '#f5e6d3', backgroundColor: '#2c1810',
             padding: { x: 25, y: 12 }
         }).setOrigin(0.5).setDepth(200);
@@ -870,6 +934,25 @@ class ExcavationScene extends Phaser.Scene {
     }
 
     // ── 工具函数 ──
+    /**
+     * 获取文物图标的纹理 key，优先级：个体纹理 → 类型纹理 → null
+     */
+    getArtifactIconKey(artifact) {
+        if (!artifact) { console.warn('[ExcavationScene] getArtifactIconKey: artifact is null'); return null; }
+        const idKey = 'artifact_' + artifact.id;
+        const existsId = this.textures.exists(idKey);
+        console.log('[ExcavationScene] getArtifactIconKey:', {
+            id: artifact.id, type: artifact.type,
+            idKey, existsId
+        });
+        if (existsId) return idKey;
+        // 最后一次机会：枚举纹理管理器所有 key，找出匹配的
+        const allKeys = this.textures.getTextureKeys();
+        const anyMatch = allKeys.filter(k => k.includes('artifact'));
+        console.warn('[ExcavationScene] 未找到图标纹理！文物:', artifact.id, 'type:', artifact.type, '所有文物相关纹理:', anyMatch);
+        return null;
+    }
+
     lerpColor(c1, c2, t) {
         const r1 = (c1 >> 16) & 0xFF, g1 = (c1 >> 8) & 0xFF, b1 = c1 & 0xFF;
         const r2 = (c2 >> 16) & 0xFF, g2 = (c2 >> 8) & 0xFF, b2 = c2 & 0xFF;

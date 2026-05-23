@@ -7,39 +7,80 @@ class MainScene extends Phaser.Scene {
     }
 
     create() {
-        this.config = GameConfig;
-        this.state = window.gameState;
-        this.economy = window.economyManager;
-        this.saveManager = window.saveManager;
-        this.prestigeManager = window.prestigeManager;
-        this.audio = window.audioManager;
+        try {
+            this.config = GameConfig;
+            this.state = window.gameState;
+            this.economy = window.economyManager;
+            this.saveManager = window.saveManager;
+            this.prestigeManager = window.prestigeManager;
+            this.audio = window.audioManager;
 
-        // 启动自动存档
-        this.saveManager.startAutoSave();
+            // 安全校验：确保状态对象完整
+            if (!this.state || !this.economy || !this.saveManager || !this.prestigeManager) {
+                console.error('MainScene: 核心管理器未初始化，重置状态');
+                window.gameState = new GameState();
+                window.economyManager = new EconomyManager(window.gameState);
+                window.saveManager = new SaveManager(window.gameState);
+                window.prestigeManager = new PrestigeManager(window.gameState);
+                this.state = window.gameState;
+                this.economy = window.economyManager;
+                this.saveManager = window.saveManager;
+                this.prestigeManager = window.prestigeManager;
+            }
 
-        // 入场淡入过渡
-        this.cameras.main.fadeIn(400, 26, 15, 10);
+            // 确保 prestigeLevel 有效
+            if (typeof this.state.prestigeLevel !== 'number' || this.state.prestigeLevel < 0 || this.state.prestigeLevel > 5) {
+                console.warn('MainScene: prestigeLevel 无效 (' + this.state.prestigeLevel + ')，重置为 0');
+                this.state.prestigeLevel = 0;
+            }
 
-        // 创建界面
-        this.createBackground();
-        this.createHeader();
-        this.createExcavationArea();
-        this.createLeftPanel();
-        this.createRightPanel();
-        this.createBottomBar();
+            // 启动自动存档
+            this.saveManager.startAutoSave();
 
-        // 同步统计面板与实际数据
-        this.updateUI();
+            // 入场淡入过渡
+            this.cameras.main.fadeIn(400, 26, 15, 10);
 
-        // 显示欢迎提示
-        this.showWelcomeMessage();
+            // 创建界面
+            this.createBackground();
+            this.createHeader();
+            this.createExcavationArea();
+            this.createLeftPanel();
+            this.createRightPanel();
+            this.createBottomBar();
 
-        // 挖掘相关状态
-        this.isDigging = false;
-        this.isLaboring = false;
-        this.laborType = null;
-        this.laborCleanCooldown = 0;
-        this.laborPotteryCooldown = 0;
+            // 同步统计面板与实际数据
+            this.updateUI();
+
+            // 显示欢迎提示
+            this.showWelcomeMessage();
+
+            // 挖掘相关状态
+            this.isDigging = false;
+            this.isLaboring = false;
+            this.laborType = null;
+            this.laborCleanCooldown = 0;
+            this.laborPotteryCooldown = 0;
+            this.techArchaeologyEnabled = false;
+        } catch (e) {
+            console.error('MainScene.create 错误:', e);
+            try {
+                const errorText = this.add.text(
+                    this.config ? this.config.width / 2 : 600,
+                    this.config ? this.config.height / 2 : 400,
+                    '游戏加载失败\n请刷新页面重试\n\n' + (e.message || e),
+                    {
+                        fontSize: '22px',
+                        fontFamily: 'Arial, sans-serif',
+                        color: '#ff4444',
+                        align: 'center',
+                        backgroundColor: '#1a0000',
+                        padding: { x: 30, y: 20 }
+                    }
+                ).setOrigin(0.5).setDepth(1000);
+            } catch (e2) {
+                console.error('无法显示错误信息:', e2);
+            }
+        }
     }
 
     createBackground() {
@@ -61,15 +102,34 @@ class MainScene extends Phaser.Scene {
     createHeader() {
         const headerY = 35;
 
-        this.add.image(60, headerY, 'icon_prestige').setScale(0.8);
+        // 声望图标 + 文字 — 点击跳转声望系统
+        const prestigeIcon = this.add.image(60, headerY, 'icon_prestige').setScale(0.8)
+            .setInteractive({ useHandCursor: true });
         this.prestigeText = this.add.text(85, headerY - 8, `声望 Lv.${this.state.prestigeLevel}`, {
             fontSize: '18px', fontFamily: 'Microsoft YaHei', color: '#d4a574'
-        });
+        }).setInteractive({ useHandCursor: true });
 
-        this.add.image(195, headerY, 'icon_prestige2').setScale(0.8);
+        const gotoPrestige = () => {
+            if (this.audio) this.audio.click();
+            this.cameras.main.fadeOut(300, 26, 15, 10);
+            this.time.delayedCall(300, () => this.scene.start('PrestigeScene'));
+        };
+        prestigeIcon.on('pointerdown', gotoPrestige);
+        this.prestigeText.on('pointerdown', gotoPrestige);
+        this.prestigeText.on('pointerover', () => this.prestigeText.setColor('#f4d03f'));
+        this.prestigeText.on('pointerout', () => this.prestigeText.setColor('#d4a574'));
+
+        // JP 图标 + 文字 — 也可点击跳转
+        const jpIcon = this.add.image(195, headerY, 'icon_prestige2').setScale(0.8)
+            .setInteractive({ useHandCursor: true });
         this.jpText = this.add.text(220, headerY - 8, `${this.state.prestigePoints} JP`, {
             fontSize: '18px', fontFamily: 'Microsoft YaHei', color: '#9b59b6'
-        });
+        }).setInteractive({ useHandCursor: true });
+
+        jpIcon.on('pointerdown', gotoPrestige);
+        this.jpText.on('pointerdown', gotoPrestige);
+        this.jpText.on('pointerover', () => this.jpText.setColor('#d4a574'));
+        this.jpText.on('pointerout', () => this.jpText.setColor('#9b59b6'));
 
         this.add.image(330, headerY, 'icon_money').setScale(0.8);
         this.fundsText = this.add.text(355, headerY - 8, `¥${this.formatMoney(this.state.funds.toNumber())}`, {
@@ -139,6 +199,13 @@ class MainScene extends Phaser.Scene {
         this.siteSeparator.lineStyle(1, 0xd4a574, 0.25);
         this.siteSeparator.lineBetween(ex.x, ex.y + ex.height + 32, ex.x + ex.width, ex.y + ex.height + 32);
 
+        // ── 科技考古按钮（Lv.3+ 解锁）──
+        this.techArchaeologyBtn = null;
+        this.techArchaeologyLabel = null;
+        if (this.state.prestigeLevel >= 3) {
+            this.createTechArchaeologyToggle(ex);
+        }
+
         this.siteButtons = [];
         const siteY = ex.y + ex.height + 55;
         this.createSiteButtons(siteY);
@@ -203,6 +270,38 @@ class MainScene extends Phaser.Scene {
             });
 
         return container;
+    }
+
+    // ── 科技考古：Lv.3 解锁，切换开关 ──
+    createTechArchaeologyToggle(ex) {
+        const y = ex.y + ex.height + 10;
+        const labelX = ex.x + ex.width - 120;
+
+        this.techArchaeologyLabel = this.add.text(labelX, y, '🤖 科技考古：关', {
+            fontSize: '13px', fontFamily: 'Microsoft YaHei', color: '#8b7355',
+            backgroundColor: '#2c1810', padding: { x: 10, y: 4 }
+        }).setOrigin(1, 0).setInteractive({ useHandCursor: true }).setDepth(5);
+
+        this.techArchaeologyLabel.on('pointerdown', () => {
+            this.techArchaeologyEnabled = !this.techArchaeologyEnabled;
+            if (this.techArchaeologyEnabled) {
+                this.techArchaeologyLabel.setText('🤖 科技考古：开');
+                this.techArchaeologyLabel.setColor('#27ae60');
+                this.techArchaeologyLabel.setStyle({
+                    fontSize: '13px', fontFamily: 'Microsoft YaHei', color: '#27ae60',
+                    backgroundColor: '#1a3d1a', padding: { x: 10, y: 4 }
+                });
+                this.showMessage('🤖 科技考古已开启：点击层位即可自动出土文物');
+            } else {
+                this.techArchaeologyLabel.setText('🤖 科技考古：关');
+                this.techArchaeologyLabel.setColor('#8b7355');
+                this.techArchaeologyLabel.setStyle({
+                    fontSize: '13px', fontFamily: 'Microsoft YaHei', color: '#8b7355',
+                    backgroundColor: '#2c1810', padding: { x: 10, y: 4 }
+                });
+                this.showMessage('切回手动刮土模式');
+            }
+        });
     }
 
     createLeftPanel() {
@@ -331,9 +430,9 @@ class MainScene extends Phaser.Scene {
 
         const panelBg = this.add.graphics();
         panelBg.fillStyle(0x2c1810, 0.95);
-        panelBg.fillRoundedRect(panelX, panelY, 280, 460, 12);
+        panelBg.fillRoundedRect(panelX, panelY, 280, 500, 12);
         panelBg.lineStyle(2, 0xd4a574, 0.3);
-        panelBg.strokeRoundedRect(panelX, panelY, 280, 460, 12);
+        panelBg.strokeRoundedRect(panelX, panelY, 280, 500, 12);
 
         this.add.text(panelX + 140, panelY + 20, '🏛️ 博物馆', {
             fontSize: '16px', fontFamily: 'Microsoft YaHei', color: '#d4a574', fontStyle: 'bold'
@@ -358,46 +457,66 @@ class MainScene extends Phaser.Scene {
             fontSize: '18px', fontFamily: 'Microsoft YaHei', color: '#27ae60', fontStyle: 'bold'
         }).setOrigin(0.5);
 
+        // ── 文物修复工坊（Lv.4 解锁）──
+        if (this.state.prestigeLevel >= 4) {
+            const workshopBtn = this.add.text(panelX + 140, panelY + 140, '🔧 文物修复工坊', {
+                fontSize: '14px', fontFamily: 'Microsoft YaHei', color: '#7fb3d5',
+                backgroundColor: '#1a2d3d', padding: { x: 14, y: 6 }
+            }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+            workshopBtn.on('pointerdown', () => {
+                if (this.audio) this.audio.click();
+                this.cameras.main.fadeOut(300, 26, 15, 10);
+                this.time.delayedCall(300, () => this.scene.start('RepairWorkshopScene'));
+            });
+            this.addButtonEffects(workshopBtn);
+            this.workshopBtn = workshopBtn;
+        }
+
+        // 分隔线
+        const div2 = this.add.graphics();
+        div2.lineStyle(1, 0xd4a574, 0.2);
+        div2.lineBetween(panelX + 20, panelY + 175, panelX + 260, panelY + 175);
+
         // ── 零活打工区 ──
-        this.add.text(panelX + 140, panelY + 160, '🔨 考古零活', {
+        this.add.text(panelX + 140, panelY + 195, '🔨 考古零活', {
             fontSize: '14px', fontFamily: 'Microsoft YaHei', color: '#d4a574'
         }).setOrigin(0.5);
 
         // 清理探方
-        this.laborCleanBtn = this.add.text(panelX + 140, panelY + 200, '🧹 清理探方', {
+        this.laborCleanBtn = this.add.text(panelX + 140, panelY + 230, '🧹 清理探方', {
             fontSize: '14px', fontFamily: 'Microsoft YaHei', color: '#8b7355',
             backgroundColor: '#3d2817', padding: { x: 14, y: 8 }
             }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         this.laborCleanBtn.on('pointerdown', () => { if (this.audio) this.audio.click(); this.doCleanJob(); });
         this.addButtonEffects(this.laborCleanBtn);
 
-        this.laborCleanLabel = this.add.text(panelX + 140, panelY + 228, '¥300~500  |  就绪', {
+        this.laborCleanLabel = this.add.text(panelX + 140, panelY + 258, '¥300~500  |  就绪', {
             fontSize: '11px', fontFamily: 'Microsoft YaHei', color: '#5a7a5a'
         }).setOrigin(0.5);
 
         // 修复陶片
-        this.laborPotteryBtn = this.add.text(panelX + 140, panelY + 260, '🏺 修复陶片', {
+        this.laborPotteryBtn = this.add.text(panelX + 140, panelY + 290, '🏺 修复陶片', {
             fontSize: '14px', fontFamily: 'Microsoft YaHei', color: '#8b7355',
             backgroundColor: '#3d2817', padding: { x: 14, y: 8 }
             }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         this.laborPotteryBtn.on('pointerdown', () => { this.audio.click(); this.doPotteryJob(); });
         this.addButtonEffects(this.laborPotteryBtn);
 
-        this.laborPotteryLabel = this.add.text(panelX + 140, panelY + 288, '¥800~1200  |  需要声望 Lv.1', {
+        this.laborPotteryLabel = this.add.text(panelX + 140, panelY + 318, '¥800~1200  |  需要声望 Lv.1', {
             fontSize: '11px', fontFamily: 'Microsoft YaHei', color: '#8b7355'
         }).setOrigin(0.5);
 
         // 转生区域
-        this.add.text(panelX + 140, panelY + 330, '🔮 学术休假', {
+        this.add.text(panelX + 140, panelY + 360, '🔮 学术休假', {
             fontSize: '14px', fontFamily: 'Microsoft YaHei', color: '#d4a574'
         }).setOrigin(0.5);
 
-        this.jpGainText = this.add.text(panelX + 140, panelY + 360,
+        this.jpGainText = this.add.text(panelX + 140, panelY + 390,
             `可获得: ${this.state.jackpotPointsThisRun} JP`, {
                 fontSize: '12px', fontFamily: 'Microsoft YaHei', color: '#9b59b6'
             }).setOrigin(0.5);
 
-        const prestigeBtn = this.add.text(panelX + 140, panelY + 395, '开始转生', {
+        const prestigeBtn = this.add.text(panelX + 140, panelY + 425, '开始转生', {
             fontSize: '16px', fontFamily: 'Microsoft YaHei', color: '#f5e6d3',
             backgroundColor: '#5a3d7a', padding: { x: 20, y: 10 }
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
@@ -409,7 +528,7 @@ class MainScene extends Phaser.Scene {
         prestigeBtn.on('pointerout', () => this.hidePrestigeTooltip());
         this.prestigeBtn = prestigeBtn;
 
-        const skillBtn = this.add.text(panelX + 140, panelY + 440, '⭐ 声望技能树', {
+        const skillBtn = this.add.text(panelX + 140, panelY + 470, '⭐ 声望技能树', {
             fontSize: '14px', fontFamily: 'Microsoft YaHei', color: '#8b7355'
         }).setOrigin(0.5).setInteractive({ useHandCursor: true })
             .on('pointerdown', () => {
@@ -1003,6 +1122,51 @@ class MainScene extends Phaser.Scene {
             this.depthLabels.forEach(l => { if (l && l.setVisible) l.setVisible(false); });
         }
 
+        const eraData = EraData[this.state.currentEra];
+
+        // ── 科技考古：一键出土 ──
+        if (this.techArchaeologyEnabled) {
+            this.soilLayers.forEach(l => { l.remaining = 0; });
+            this.removedSoilVolume = this.totalSoilVolume;
+            this.currentLayer = this.soilLayers.length - 1;
+
+            this.createDigLayers();
+            this.drawStrata();
+
+            // 科技扫描动画
+            this.showMessage(`🤖 科技考古扫描中：${eraData.name} · ${site.name}`);
+            const scanText = this.add.text(
+                this.config.excavation.x + this.config.excavation.width / 2,
+                this.config.excavation.y + this.config.excavation.height / 2,
+                '🔬 扫描中...', {
+                    fontSize: '24px', fontFamily: 'Microsoft YaHei',
+                    color: '#00ffcc', fontStyle: 'bold'
+                }
+            ).setOrigin(0.5).setDepth(30);
+
+            // 扫描线效果
+            const scanLine = this.add.graphics().setDepth(25);
+            let scanY = this.config.excavation.y;
+            this.tweens.add({
+                targets: { y: scanY },
+                y: this.config.excavation.y + this.config.excavation.height,
+                duration: 800, ease: 'Sine.easeInOut',
+                onUpdate: (tween) => {
+                    scanLine.clear();
+                    scanLine.lineStyle(2, 0x00ffcc, 0.8);
+                    scanLine.lineBetween(this.config.excavation.x, tween.targets[0].y,
+                        this.config.excavation.x + this.config.excavation.width, tween.targets[0].y);
+                },
+                onComplete: () => {
+                    scanLine.destroy();
+                    scanText.destroy();
+                    this.cameras.main.flash(200, 0, 255, 100);
+                    this.revealArtifact();
+                }
+            });
+            return;
+        }
+
         // 创建挖掘层
         this.createDigLayers();
         this.setupDigInput();
@@ -1010,7 +1174,6 @@ class MainScene extends Phaser.Scene {
         // 进度条
         this.createProgressUI();
 
-        const eraData = EraData[this.state.currentEra];
         this.showMessage(`开始发掘 ${eraData.name} · ${site.name}`);
 
         // 入场闪光
@@ -1278,6 +1441,8 @@ class MainScene extends Phaser.Scene {
 
         if (alpha < 0.80) {
             if (this.artifactLabel) this.artifactLabel.setAlpha(0);
+            // 清除文物图标
+            if (this.artifactIcon) { this.artifactIcon.destroy(); this.artifactIcon = null; }
             const qAlpha = alpha < 0.15 ? 1 : 1 - (alpha - 0.15) / 0.65;
             if (this.questionMark) this.questionMark.destroy();
             this.questionMark = this.add.text(cx, cy, '?', {
@@ -1289,6 +1454,21 @@ class MainScene extends Phaser.Scene {
             if (this.artifactLabel) {
                 this.artifactLabel.setText(this.currentArtifact.name);
                 this.artifactLabel.setAlpha((alpha - 0.80) / 0.20);
+            }
+            // alpha >= 0.80: 揭示文物图标
+            if (!this.artifactIcon) {
+                const iconKey = this.getArtifactIconKey(this.currentArtifact);
+                if (iconKey) {
+                    this.artifactIcon = this.add.image(cx, cy - 15, iconKey)
+                        .setDisplaySize(80, 80)
+                        .setAlpha(0)
+                        .setDepth(13);
+                    this.tweens.add({
+                        targets: this.artifactIcon,
+                        alpha: 1,
+                        duration: 300
+                    });
+                }
             }
         }
     }
@@ -1520,6 +1700,8 @@ class MainScene extends Phaser.Scene {
             this.questionMark = null;
         }
 
+        // 清除旧图标，drawArtifactOutline(1.0) 会重新创建
+        if (this.artifactIcon) { this.artifactIcon.destroy(); this.artifactIcon = null; }
         this.drawArtifactOutline(1.0);
 
         if (this.artifactLabel) {
@@ -1546,7 +1728,9 @@ class MainScene extends Phaser.Scene {
         }
 
         const baseAuth = this.currentArtifact.authenticity;
-        const authChance = this.state.calculateAuthenticityChance(baseAuth);
+        // Lv.0 新手保护：无赝品
+        const authChance = this.state.prestigeLevel === 0 ? 1.0
+            : this.state.calculateAuthenticityChance(baseAuth);
         const isAuthentic = Math.random() < authChance;
 
         const conditionRoll = Math.random();
@@ -1580,7 +1764,10 @@ class MainScene extends Phaser.Scene {
         overlay.fillRect(0, 0, this.config.width, this.config.height);
         modal.add(overlay);
 
-        const pw = 500, ph = 440;
+        const pw = 500;
+        // 面板高度自适应：有文物图标时多留空间
+        const iconKey = this.getArtifactIconKey(result.artifact);
+        const ph = iconKey ? 520 : 450;
         const px = (this.config.width - pw) / 2;
         const py = (this.config.height - ph) / 2;
 
@@ -1613,19 +1800,29 @@ class MainScene extends Phaser.Scene {
             fontSize: '28px', fontFamily: 'Microsoft YaHei', color: titleColor, fontStyle: 'bold'
         }).setOrigin(0.5));
 
-        modal.add(this.add.text(this.config.width / 2, py + 85, result.artifact.name, {
+        // 文物图标 — 有图标时后续元素整体下移 70px
+        const shift = iconKey ? 70 : 0;
+        if (iconKey) {
+            try {
+                const img = this.add.image(this.config.width / 2, py + 90, iconKey)
+                    .setDisplaySize(56, 56).setDepth(101);
+                modal.add(img);
+            } catch (e) {}
+        }
+
+        modal.add(this.add.text(this.config.width / 2, py + 85 + shift, result.artifact.name, {
             fontSize: '22px', fontFamily: 'Microsoft YaHei', color: '#f5e6d3'
         }).setOrigin(0.5));
 
         const rarityData = ArtifactData.rarity[result.artifact.rarity];
-        modal.add(this.add.text(this.config.width / 2, py + 120,
+        modal.add(this.add.text(this.config.width / 2, py + 120 + shift,
             `[${rarityData.name}] ×${rarityData.multiplier}`, {
                 fontSize: '16px', fontFamily: 'Microsoft YaHei', color: rarityData.color
             }).setOrigin(0.5));
 
         if (isAuthentic) {
             const condData = ArtifactData.condition[condition];
-            modal.add(this.add.text(this.config.width / 2, py + 150,
+            modal.add(this.add.text(this.config.width / 2, py + 150 + shift,
                 `品相: ${condData.name} (×${condData.valueMult})`, {
                     fontSize: '14px', fontFamily: 'Microsoft YaHei', color: '#8b7355'
                 }).setOrigin(0.5));
@@ -1633,7 +1830,7 @@ class MainScene extends Phaser.Scene {
 
         if (result.value.greaterThan(new BigNumber(0))) {
             const valLabel = isAuthentic ? '💰 获得经费' : '🔧 报销材料费';
-            modal.add(this.add.text(this.config.width / 2, py + 200,
+            modal.add(this.add.text(this.config.width / 2, py + 200 + shift,
                 `${valLabel}: ¥${result.value.toString()}`, {
                     fontSize: isAuthentic ? '26px' : '18px',
                     fontFamily: 'Microsoft YaHei',
@@ -1642,13 +1839,13 @@ class MainScene extends Phaser.Scene {
                 }).setOrigin(0.5));
         }
 
-        modal.add(this.add.text(this.config.width / 2, py + 250, result.artifact.description, {
+        modal.add(this.add.text(this.config.width / 2, py + 250 + shift, result.artifact.description, {
             fontSize: '13px', fontFamily: 'Microsoft YaHei', color: '#a08060',
             align: 'center', wordWrap: { width: pw - 60 }
         }).setOrigin(0.5));
 
         if (result.artifact.funFact) {
-            modal.add(this.add.text(this.config.width / 2, py + 285,
+            modal.add(this.add.text(this.config.width / 2, py + 285 + shift,
                 `💬 ${result.artifact.funFact}`, {
                     fontSize: '12px', fontFamily: 'Microsoft YaHei', color: '#8b7355',
                     fontStyle: 'italic', align: 'center', wordWrap: { width: pw - 60 }
@@ -1657,11 +1854,11 @@ class MainScene extends Phaser.Scene {
 
         // ── 按钮 ──
         if (result.type === 'national_treasure') {
-            modal.add(this.add.text(this.config.width / 2, py + 325, '🏛️ 国宝级文物，请做抉择:', {
+            modal.add(this.add.text(this.config.width / 2, py + 325 + shift, '🏛️ 国宝级文物，请做抉择:', {
                 fontSize: '14px', fontFamily: 'Microsoft YaHei', color: '#d4a574'
             }).setOrigin(0.5));
 
-            const btnY = py + 365;
+            const btnY = py + 365 + shift;
 
             const handOverBtn = this.add.text(this.config.width / 2 - 110, btnY,
                 `上交国家 (+${result.artifact.handOverReward || 400}JP)`, {
@@ -1699,7 +1896,7 @@ class MainScene extends Phaser.Scene {
             modal.add(handOverBtn);
             modal.add(keepBtn);
         } else {
-            const continueBtn = this.add.text(this.config.width / 2, py + 390, '继续游戏 →', {
+            const continueBtn = this.add.text(this.config.width / 2, py + 390 + shift, '继续游戏 →', {
                 fontSize: '18px', fontFamily: 'Microsoft YaHei', color: '#f5e6d3',
                 backgroundColor: '#3d2817', padding: { x: 25, y: 10 }
             }).setOrigin(0.5).setInteractive({ useHandCursor: true });
@@ -1731,6 +1928,7 @@ class MainScene extends Phaser.Scene {
         if (this.artifactOutline) { this.artifactOutline.destroy(); this.artifactOutline = null; }
         if (this.artifactLabel) { this.artifactLabel.destroy(); this.artifactLabel = null; }
         if (this.questionMark) { this.questionMark.destroy(); this.questionMark = null; }
+        if (this.artifactIcon) { this.artifactIcon.destroy(); this.artifactIcon = null; }
 
         // 清理进度UI
         if (this.progressBg) { this.progressBg.destroy(); this.progressBg = null; }
@@ -2113,6 +2311,16 @@ class MainScene extends Phaser.Scene {
                 });
             });
         }
+    }
+
+    /**
+     * 获取文物图标的纹理 key，优先级：个体纹理 → 类型纹理 → null
+     */
+    getArtifactIconKey(artifact) {
+        if (!artifact) return null;
+        const idKey = 'artifact_' + artifact.id;
+        if (this.textures.exists(idKey)) return idKey;
+        return null;
     }
 }
 

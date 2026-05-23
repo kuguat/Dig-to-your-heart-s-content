@@ -14,7 +14,7 @@ const GameConfig = {
         width: 500,
         height: 400,
         x: 350,
-        y: 185
+        y: 155
     },
 
     // 颜色主题
@@ -46,8 +46,50 @@ const GameConfig = {
         volume: 0.5
     },
 
+    // 字体排版
+    typography: {
+        fontFamily: 'KaiTi',          // 楷体，Win/Mac 自带，书法质感
+        mysteryFont: 'serif',         // 发掘中问号?用的装饰字体
+        size: {
+            micro:   '11px',
+            tiny:    '12px',
+            caption: '13px',
+            small:   '14px',
+            body:    '15px',
+            bodyMd:  '16px',
+            subhead: '17px',
+            title:   '20px',
+            h3:      '22px',
+            h2sm:    '24px',
+            h2:      '26px',
+            h1sm:    '28px',
+            h1:      '30px',
+            display: '34px',
+            hero:    '38px',
+            giant:   '52px'
+        }
+    },
+
     // 调试模式
     debug: true
+};
+
+/**
+ * 快捷文字样式工厂 — 所有场景统一入口
+ * @param {string} sizeKey  字号键名（如 'body' 'subhead' 'h2'）
+ * @param {object} overrides  覆盖属性（color, fontStyle, align 等）
+ * @returns {object} 可直接传入 add.text() 的样式对象
+ */
+GameConfig.ts = function(sizeKey, overrides) {
+    var base = GameConfig.typography;
+    var style = { fontFamily: base.fontFamily, fontSize: base.size[sizeKey] || '14px' };
+    if (overrides) {
+        var keys = Object.keys(overrides);
+        for (var i = 0; i < keys.length; i++) {
+            style[keys[i]] = overrides[keys[i]];
+        }
+    }
+    return style;
 };
 
 // 导出到全局

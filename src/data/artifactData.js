@@ -495,7 +495,7 @@ const ArtifactData = {
         return artifacts;
     },
 
-    // 从特定层位随机获取文物
+    // 从特定层位随机获取文物（含转生国宝概率加成）
     getRandomArtifactForSite: function(era, siteRisk) {
         const artifacts = this.getArtifactsForEra(era);
         if (!artifacts || artifacts.length === 0) return null;
@@ -517,6 +517,13 @@ const ArtifactData = {
         if (siteRisk > 0.3) {
             weights.legendary = 5;
             weights.mythic = 1;
+        }
+
+        // 转生永久加成：国宝（legendary）和传说（mythic）概率提升
+        const nationalBonus = window.prestigeManager ? window.prestigeManager.getPermanentBonus('nationalChance') : 0;
+        if (nationalBonus > 0) {
+            weights.legendary = weights.legendary * (1 + nationalBonus);
+            weights.mythic = weights.mythic * (1 + nationalBonus);
         }
 
         const totalWeight = artifacts.reduce((sum, a) => sum + (weights[a.rarity] || 1), 0);

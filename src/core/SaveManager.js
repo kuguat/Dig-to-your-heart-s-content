@@ -67,8 +67,14 @@ class SaveManager {
         try {
             const data = JSON.parse(savedData);
 
-            // 恢复数据
-            this.gameState.funds = new BigNumber(data.funds.mantissa, data.funds.exponent);
+            // 处理旧存档格式：funds 可能是数字或 BigNumber 格式
+            if (typeof data.funds === 'number') {
+                this.gameState.funds = new BigNumber(data.funds);
+            } else if (data.funds && typeof data.funds.mantissa !== 'undefined') {
+                this.gameState.funds = new BigNumber(data.funds.mantissa, data.funds.exponent);
+            } else {
+                this.gameState.funds = new BigNumber(10000);
+            }
             this.gameState.prestigePoints = data.prestigePoints || 0;
             this.gameState.currentEra = data.currentEra || 'neolithic';
             this.gameState.totalExcavations = data.totalExcavations || 0;
@@ -77,7 +83,13 @@ class SaveManager {
             this.gameState.totalFakesFound = data.totalFakesFound || 0;
             this.gameState.totalNationalTreasures = data.totalNationalTreasures || 0;
             this.gameState.upgrades = data.upgrades || this.gameState.upgrades;
-            this.gameState.prestigeLevel = data.prestigeLevel || 0;
+            // 安全处理声望等级
+            let lv = data.prestigeLevel || 0;
+            if (typeof lv !== 'number' || lv < 0 || lv > 5) {
+                console.warn('SaveManager: prestigeLevel 越界 (' + lv + ')，重置为 0');
+                lv = 0;
+            }
+            this.gameState.prestigeLevel = lv;
             this.gameState.prestigeCount = data.prestigeCount || 0;
             this.gameState.discoveredArtifactIds = new Set(data.discoveredArtifactIds || []);
 

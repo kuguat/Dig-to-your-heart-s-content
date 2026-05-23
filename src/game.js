@@ -13,7 +13,7 @@ const config = {
         mode: Phaser.Scale.FIT,
         autoCenter: Phaser.Scale.CENTER_BOTH
     },
-    scene: [BootScene, MainScene, ExcavationScene, MuseumScene, PrestigeScene],
+    scene: [BootScene, MainScene, ExcavationScene, MuseumScene, PrestigeScene, RepairWorkshopScene],
     input: {
         activePointers: 2 // 支持多点触控
     }

@@ -3,159 +3,204 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>文物图标预览</title>
+<title>挖个爽 · 文物图标预览</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:#0d0a08;font-family:'Microsoft YaHei',sans-serif;padding:30px;color:#c4a474}
-h1{text-align:center;color:#e8c860;margin-bottom:6px;letter-spacing:3px}
-.sub{text-align:center;font-size:13px;color:#6a5a4a;margin-bottom:24px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;max-width:1200px;margin:0 auto}
-.card{background:linear-gradient(180deg,#1e150c,#18100a);border-radius:10px;padding:20px 14px 16px;text-align:center;border:1px solid #2a1e14}
-.card:hover{transform:translateY(-3px);border-color:#6a4a2a;box-shadow:0 6px 20px rgba(100,60,20,.25)}
-.card svg{display:block;margin:0 auto 12px}
-.card .name{font-size:15px;color:#e8c860;letter-spacing:1px}
-.card .info{font-size:11px;color:#6a5a3a;margin-top:4px}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  background: #1a0f0a;
+  color: #d4a574;
+  font-family: 'Microsoft YaHei', sans-serif;
+  padding: 24px;
+}
+h1 {
+  text-align: center;
+  font-size: 28px;
+  color: #f4d03f;
+  margin-bottom: 8px;
+  letter-spacing: 4px;
+}
+.subtitle {
+  text-align: center;
+  font-size: 13px;
+  color: #8b7355;
+  margin-bottom: 32px;
+}
+.priority-section {
+  margin-bottom: 36px;
+}
+.priority-title {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #3d2817;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.priority-badge {
+  font-size: 12px;
+  padding: 2px 10px;
+  border-radius: 10px;
+  color: #1a0f0a;
+}
+.badge-p0 { background: #f4d03f; }
+.badge-p1 { background: #e67e22; }
+.badge-p2 { background: #3498db; }
+.badge-p3 { background: #888; }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+}
+.card {
+  background: #2c1810;
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  border: 2px solid #3d2817;
+  transition: border-color .2s, transform .15s;
+}
+.card:hover {
+  border-color: #d4a574;
+  transform: translateY(-2px);
+}
+.card .img-wrap {
+  width: 128px; height: 128px;
+  margin: 0 auto 12px;
+  background: #1a0f0a;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.card .img-wrap img {
+  max-width: 100%; max-height: 100%;
+  object-fit: contain;
+  image-rendering: auto;
+}
+.card .type-name {
+  font-size: 16px;
+  font-weight: bold;
+  color: #f4d03f;
+  margin-bottom: 4px;
+}
+.card .filename {
+  font-size: 11px;
+  color: #8b7355;
+  font-family: monospace;
+  margin-bottom: 6px;
+}
+.card .artifacts {
+  font-size: 11px;
+  color: #9b8b6f;
+  line-height: 1.5;
+}
+.card .count {
+  font-size: 11px;
+  color: #5a4030;
+  margin-top: 4px;
+}
+.footer {
+  text-align: center;
+  font-size: 12px;
+  color: #5a4030;
+  margin-top: 40px;
+  padding-top: 16px;
+  border-top: 1px solid #3d2817;
+}
 </style>
 </head>
 <body>
-<h1>文物图标预览</h1>
-<p class="sub">SVG 矢量精绘 — 无需外部图片</p>
-<div class="grid" id="grid"></div>
+
+<h1>🏺 挖个爽 · 文物图标预览</h1>
+<p class="subtitle">20 种类型图标 · 覆盖全部 61 件文物 · 半写实古风手绘</p>
+
+<div class="priority-section">
+  <div class="priority-title"><span class="priority-badge badge-p0">P0</span> 必做 — 高频出现</div>
+  <div class="grid" id="grid-p0"></div>
+</div>
+
+<div class="priority-section">
+  <div class="priority-title"><span class="priority-badge badge-p1">P1</span> 重要 — 数量多或视觉突出</div>
+  <div class="grid" id="grid-p1"></div>
+</div>
+
+<div class="priority-section">
+  <div class="priority-title"><span class="priority-badge badge-p2">P2</span> 数量少但独特</div>
+  <div class="grid" id="grid-p2"></div>
+</div>
+
+<div class="priority-section">
+  <div class="priority-title"><span class="priority-badge badge-p3">P3</span> 彩蛋级</div>
+  <div class="grid" id="grid-p3"></div>
+</div>
+
+<p class="footer">图标尺寸 1024×1024 · 游戏中缩放至 256×256 · 确认后即可集成</p>
 
 <script>
-var W=100;
-
-function iconBg(color,id){return'<rect x="2" y="2" width="96" height="96" rx="8" fill="none" stroke="'+color+'" stroke-width="2.5"/>'+
-'<rect x="5" y="5" width="90" height="90" rx="6" fill="none" stroke="'+color+'" stroke-width="0.8" opacity="0.2"/>';}
-
-function drawJadeBi(color,id){return '<defs><radialGradient id="g'+id+'"><stop offset="0%" stop-color="#e8f0d8"/><stop offset="50%" stop-color="#b8d0a0"/><stop offset="100%" stop-color="#7a9060"/></radialGradient></defs>'+
-iconBg(color,id)+
-'<circle cx="50" cy="50" r="38" fill="url(#g'+id+')" stroke="#5a7a4a" stroke-width="1.2"/>'+
-'<circle cx="50" cy="50" r="34" fill="none" stroke="#5a7a4a" stroke-width="0.8"/>'+
-'<circle cx="50" cy="50" r="30" fill="none" stroke="#6a8a5a" stroke-width="0.8"/>'+
-(function(){var s='';for(var i=0;i<12;i++){var a=i*Math.PI/6,px=(50+Math.cos(a)*22).toFixed(1),py=(50+Math.sin(a)*22).toFixed(1);s+='<circle cx="'+px+'" cy="'+py+'" r="3" fill="#a8c090"/><circle cx="'+(px-0.5)+'" cy="'+(py-0.5)+'" r="1.3" fill="#e8f8d0"/>'}return s})()+
-'<circle cx="50" cy="50" r="8.5" fill="#0d0a08"/><circle cx="50" cy="50" r="9.5" fill="none" stroke="#e8f0d8" stroke-width="1.2"/>';}
-
-function drawJadeCong(color,id){return '<defs><linearGradient id="g'+id+'"><stop offset="0%" stop-color="#8a9a60"/><stop offset="30%" stop-color="#c8d8a0"/><stop offset="70%" stop-color="#a8c080"/><stop offset="100%" stop-color="#6a7a40"/></linearGradient></defs>'+
-iconBg(color,id)+
-'<rect x="18" y="14" width="64" height="72" rx="3" fill="url(#g'+id+')" stroke="#e8f0d8" stroke-width="1"/>'+
-'<rect x="29" y="29" width="28" height="28" rx="2" fill="#0d0a08"/>'+
-(function(){var s='';for(var i=0;i<3;i++)s+='<line x1="20" y1="'+(28+i*7)+'" x2="80" y2="'+(28+i*7)+'" stroke="#5a6a30" stroke-width="1"/>';return s})()+
-'<circle cx="34" cy="40" r="4.5" fill="#d0e8c0"/><circle cx="66" cy="40" r="4.5" fill="#d0e8c0"/>'+
-'<circle cx="34" cy="40" r="2.2" fill="#0d0a08"/><circle cx="66" cy="40" r="2.2" fill="#0d0a08"/>';}
-
-function drawPottery(color,id){return '<defs><linearGradient id="g'+id+'"><stop offset="0%" stop-color="#d4a070"/><stop offset="40%" stop-color="#c09060"/><stop offset="80%" stop-color="#a07040"/></linearGradient></defs>'+
-iconBg(color,id)+
-'<path d="M34,22 Q26,50 34,68 L66,68 Q74,50 66,22 Z" fill="url(#g'+id+')" stroke="#e8c8a0" stroke-width="0.7"/>'+
-'<rect x="32" y="18" width="36" height="5" rx="1" fill="#c08858"/>'+
-'<rect x="35" y="30" width="30" height="7" rx="1" fill="#8a3020" opacity="0.65"/>'+
-'<polygon points="50,26 41,34 59,34" fill="#2a1a10"/>'+
-'<circle cx="46" cy="33" r="2.5" fill="#1a0a08"/><circle cx="54" cy="33" r="2.5" fill="#1a0a08"/>'+
-'<ellipse cx="29" cy="46" rx="5" ry="9" transform="rotate(-10 29 46)" fill="#b08050"/>'+
-'<ellipse cx="71" cy="46" rx="5" ry="9" transform="rotate(10 71 46)" fill="#b08050"/>';}
-
-function drawBronzeDing(color,id){return '<defs><linearGradient id="g'+id+'"><stop offset="0%" stop-color="#4a5a3a"/><stop offset="30%" stop-color="#6a8a5a"/><stop offset="50%" stop-color="#7a9a6a"/><stop offset="100%" stop-color="#3a4a2a"/></linearGradient></defs>'+
-iconBg(color,id)+
-'<path d="M30,36 L70,36 L65,68 L35,68 Z" fill="url(#g'+id+')" stroke="#3a4a2a" stroke-width="1"/>'+
-'<circle cx="43" cy="52" r="5" fill="#4a8a4a" opacity="0.35"/>'+
-'<circle cx="59" cy="48" r="3.5" fill="#4a8a4a" opacity="0.35"/>'+
-'<path d="M34,47 A7,7 0 0,1 48,47" fill="none" stroke="#8aaa7a" stroke-width="1"/>'+
-'<path d="M52,47 A7,7 0 0,0 66,47" fill="none" stroke="#8aaa7a" stroke-width="1"/>'+
-'<rect x="28" y="32" width="44" height="5" rx="1" fill="#5a7a4a" stroke="#4a6a3a" stroke-width="1"/>'+
-'<ellipse cx="26" cy="40" rx="4" ry="8" transform="rotate(18 26 40)" fill="#5a7a4a"/>'+
-'<ellipse cx="74" cy="40" rx="4" ry="8" transform="rotate(-18 74 40)" fill="#5a7a4a"/>'+
-'<polygon points="38,67 34,80 42,80" fill="#4a5a3a"/>'+
-'<polygon points="62,67 58,80 66,80" fill="#4a5a3a"/>'+
-'<polygon points="49,67 45,82 55,82" fill="#4a5a3a"/>';}
-
-function drawPorcelain(color,id){return '<defs><linearGradient id="g'+id+'"><stop offset="0%" stop-color="#ddd"/><stop offset="30%" stop-color="#f4f4f4"/><stop offset="70%" stop-color="#eaeaea"/><stop offset="100%" stop-color="#c4c4c4"/></linearGradient></defs>'+
-iconBg(color,id)+
-'<path d="M42,18 Q42,24 40,26 C30,44 30,62 37,74 L63,74 C70,62 70,44 60,26 Q58,24 58,18 Z" fill="url(#g'+id+')"/>'+
-'<rect x="43" y="14" width="14" height="7" rx="1" fill="#d8d8d8"/>'+
-(function(){var s='';for(var i=0;i<8;i++){var a=i*Math.PI/4;s+='<line x1="50" y1="43" x2="'+(50+Math.cos(a)*9).toFixed(1)+'" y2="'+(43+Math.sin(a)*9).toFixed(1)+'" stroke="#1a3a8a" stroke-width="1.2" opacity="0.8"/>'}return s})()+
-'<path d="M41,32 Q37,38 48,50 Q54,46 59,34" fill="none" stroke="#1a3a8a" stroke-width="1" opacity="0.8"/>'+
-'<path d="M43,52 Q38,58 50,64 Q62,58 57,52" fill="none" stroke="#1a3a8a" stroke-width="1" opacity="0.8"/>'+
-'<path d="M43,22 C35,46 35,62 39,72" fill="none" stroke="#fff" stroke-width="0.8" opacity="0.3"/>';}
-
-function drawCoin(color,id){return '<defs><radialGradient id="g'+id+'"><stop offset="0%" stop-color="#e8d080"/><stop offset="40%" stop-color="#c8a040"/><stop offset="80%" stop-color="#a08030"/><stop offset="100%" stop-color="#6a5020"/></radialGradient></defs>'+
-iconBg(color,id)+
-'<circle cx="50" cy="50" r="36" fill="url(#g'+id+')" stroke="#8a6030" stroke-width="2"/>'+
-'<circle cx="50" cy="50" r="31" fill="none" stroke="#a08040" stroke-width="0.8"/>'+
-'<rect x="36" y="36" width="28" height="28" rx="1" fill="#0d0a08" stroke="#c8a858" stroke-width="0.8"/>'+
-'<text x="50" y="27" fill="#8a6030" font-size="8" font-weight="bold" text-anchor="middle" font-family="KaiTi,STKaiti,serif">開</text>'+
-'<text x="35" y="51" fill="#8a6030" font-size="8" font-weight="bold" text-anchor="middle" font-family="KaiTi,STKaiti,serif">元</text>'+
-'<text x="65" y="51" fill="#8a6030" font-size="8" font-weight="bold" text-anchor="middle" font-family="KaiTi,STKaiti,serif">寶</text>'+
-'<text x="50" y="72" fill="#8a6030" font-size="8" font-weight="bold" text-anchor="middle" font-family="KaiTi,STKaiti,serif">通</text>';}
-
-function drawStoneTool(color,id){return '<defs><linearGradient id="g'+id+'"><stop offset="0%" stop-color="#8a7a6a"/><stop offset="40%" stop-color="#a89888"/><stop offset="70%" stop-color="#9a8a7a"/><stop offset="100%" stop-color="#706050"/></linearGradient></defs>'+
-iconBg(color,id)+
-'<polygon points="28,66 47,24 66,57 41,66" fill="url(#g'+id+')" stroke="#c8b8a8" stroke-width="1"/>'+
-(function(){var s='';var lx=28,ly=66,rx=47,ry=24,bx=66,by=57;for(var i=0;i<7;i++){var t=i/7*0.7;s+='<line x1="'+(lx+(rx-lx)*t).toFixed(0)+'" y1="'+(ly+(ry-ly)*t).toFixed(0)+'" x2="'+(rx+(bx-rx)*t).toFixed(0)+'" y2="'+(ry+(by-ry)*t).toFixed(0)+'" stroke="#6a5a4a" stroke-width="0.5" opacity="0.5"/>'}return s})();}
-
-function drawBoneNeedle(color,id){return '<defs><linearGradient id="g'+id+'"><stop offset="0%" stop-color="#f0e8d8"/><stop offset="30%" stop-color="#e8dcc8"/><stop offset="60%" stop-color="#d8ccb8"/><stop offset="100%" stop-color="#c8b8a0"/></linearGradient></defs>'+
-iconBg(color,id)+
-'<path d="M50,24 Q51,38 51,52 Q50,66 50,74" fill="none" stroke="url(#g'+id+')" stroke-width="5" stroke-linecap="round"/>'+
-'<line x1="50" y1="24" x2="50" y2="30" stroke="#f8f0e8" stroke-width="2.5" stroke-linecap="round"/>'+
-'<circle cx="50" cy="28" r="1.8" fill="#0d0a08"/><circle cx="50" cy="28" r="2.3" fill="none" stroke="#b0a080" stroke-width="0.7"/>';}
-
-function drawSancaiHorse(color,id){return iconBg(color,id)+
-'<path d="M30,51 Q32,38 43,32 Q52,28 59,34 L66,45 Q70,57 62,66 L36,66 Z" fill="#d8a858"/>'+
-'<ellipse cx="49" cy="43" rx="9" ry="9" fill="#e8c860" opacity="0.55"/>'+
-'<ellipse cx="57" cy="51" rx="7" ry="7" fill="#60a860" opacity="0.45"/>'+
-'<ellipse cx="41" cy="55" rx="5.5" ry="5.5" fill="#f0f0e0" opacity="0.35"/>'+
-'<ellipse cx="34" cy="38" rx="7" ry="5" transform="rotate(-30 34 38)" fill="#d8a858"/>'+
-'<circle cx="30" cy="36" r="1.3" fill="#0d0a08"/>'+
-'<rect x="38" y="65" width="2.5" height="13" fill="#c09040"/><rect x="38" y="76" width="4.4" height="2.5" fill="#e8a858"/>'+
-'<rect x="47" y="65" width="2.5" height="13" fill="#c09040"/><rect x="47" y="76" width="4.4" height="2.5" fill="#e8a858"/>'+
-'<rect x="55" y="65" width="2.5" height="13" fill="#c09040"/><rect x="55" y="76" width="4.4" height="2.5" fill="#e8a858"/>'+
-'<rect x="62" y="65" width="2.5" height="13" fill="#c09040"/><rect x="62" y="76" width="4.4" height="2.5" fill="#e8a858"/>'+
-'<path d="M34,38 Q30,44 28,51" fill="none" stroke="#6a4a2a" stroke-width="0.7"/>';}
-
-function drawGold(color,id){return '<defs><linearGradient id="g'+id+'"><stop offset="0%" stop-color="#e8c840"/><stop offset="100%" stop-color="#a08020"/></linearGradient></defs>'+
-iconBg(color,id)+
-'<line x1="45" y1="64" x2="41" y2="81" stroke="url(#g'+id+')" stroke-width="3" stroke-linecap="round"/>'+
-'<line x1="55" y1="64" x2="59" y2="81" stroke="url(#g'+id+')" stroke-width="3" stroke-linecap="round"/>'+
-'<path d="M45,62 Q40,48 32,32" fill="none" stroke="#d8b830" stroke-width="2" stroke-linecap="round"/>'+
-'<path d="M55,62 Q60,48 68,32" fill="none" stroke="#d8b830" stroke-width="2" stroke-linecap="round"/>'+
-'<path d="M50,58 Q49,45 45,30" fill="none" stroke="#d8b830" stroke-width="2" stroke-linecap="round"/>'+
-(function(){var s='';function flower(x,y,r){for(var a=0;a<Math.PI*2;a+=Math.PI/3){s+='<circle cx="'+(x+Math.cos(a)*r).toFixed(1)+'" cy="'+(y+Math.sin(a)*r*0.7).toFixed(1)+'" r="'+(r*0.5).toFixed(1)+'" fill="#f0d060"/>'}s+='<circle cx="'+x+'" cy="'+y+'" r="'+(r*0.45).toFixed(1)+'" fill="#e8c840"/>'}flower(32,30,5.5);flower(68,30,5.5);flower(45,28,4.5);flower(38,24,3.5);flower(62,24,3.5);return s})()+
-'<circle cx="32" cy="30" r="2.2" fill="#e03030"/><circle cx="32" cy="30" r="1" fill="#f06060"/>'+
-'<circle cx="68" cy="30" r="2.2" fill="#e03030"/><circle cx="68" cy="30" r="1" fill="#f06060"/>';}
-
-function drawBronzeGe(color,id){return '<defs><linearGradient id="g'+id+'"><stop offset="0%" stop-color="#5a6a4a"/><stop offset="50%" stop-color="#8aaa7a"/><stop offset="100%" stop-color="#4a5a3a"/></linearGradient></defs>'+
-iconBg(color,id)+
-'<path d="M24,32 L66,38 Q68,51 58,59 L40,57 L40,40 Z" fill="url(#g'+id+')" stroke="#3a4a2a" stroke-width="0.8"/>'+
-'<line x1="26" y1="34" x2="64" y2="40" stroke="#c8d8b8" stroke-width="0.8" opacity="0.45"/>'+
-'<rect x="41" y="57" width="9" height="22" fill="#4a5a3a" stroke="#3a4a2a" stroke-width="1"/>'+
-'<circle cx="46" cy="64" r="2.2" fill="#0d0a08"/><circle cx="46" cy="72" r="2.2" fill="#0d0a08"/>';}
-
-var items=[
-  {name:'玉璧',era:'新石器',rarity:'少见',color:'#2ecc71',draw:drawJadeBi},
-  {name:'玉琮',era:'新石器',rarity:'珍品',color:'#9b59b6',draw:drawJadeCong},
-  {name:'人面鱼纹彩陶盆',era:'新石器',rarity:'罕见',color:'#3498db',draw:drawPottery},
-  {name:'司母戊鼎',era:'商周',rarity:'国宝',color:'#f39c12',draw:drawBronzeDing},
-  {name:'青铜戈',era:'商周',rarity:'普通',color:'#888888',draw:drawBronzeGe},
-  {name:'开元通宝',era:'盛唐',rarity:'普通',color:'#888888',draw:drawCoin},
-  {name:'唐三彩马',era:'盛唐',rarity:'少见',color:'#2ecc71',draw:drawSancaiHorse},
-  {name:'定窑青花瓷',era:'宋元',rarity:'少见',color:'#2ecc71',draw:drawPorcelain},
-  {name:'金凤钗',era:'盛唐',rarity:'少见',color:'#2ecc71',draw:drawGold},
-  {name:'石刀',era:'新石器',rarity:'普通',color:'#888888',draw:drawStoneTool},
-  {name:'骨针',era:'新石器',rarity:'普通',color:'#888888',draw:drawBoneNeedle}
+const icons = [
+  // P0 - 必做
+  { file:'pottery.png',     name:'陶器',   priority:'p0',
+    artifacts:'人面鱼纹彩陶盆 · 鹳鱼石斧图陶缸 · 彩陶残片 · 小口尖底瓶 · 波浪纹陶罐 · 印纹硬陶罐', count:6 },
+  { file:'jade.png',        name:'玉器',   priority:'p0',
+    artifacts:'玉琮 · 神人兽面纹玉琮 · 玉璜 · 玉龙 · 和田青白玉玺', count:5 },
+  { file:'jade_bi.png',     name:'玉璧',   priority:'p0',
+    artifacts:'玉璧 · 龙纹玉璧', count:2 },
+  { file:'bronze.png',      name:'青铜器', priority:'p0',
+    artifacts:'后母戊鼎 · 青铜尊 · 青铜戈 · 青铜斝 · 饕餮纹方鼎 · 日光铜镜 · 秦半两钱 · 封泥印章 · 海兽葡萄镜 · 交子印版 · 指南鱼 · 开元通宝 · 洪武通宝', count:13 },
+  { file:'porcelain.png',   name:'瓷器',   priority:'p0',
+    artifacts:'汝窑天青釉盘 · 官窑粉青贯耳瓶 · 哥窑冰裂纹洗 · 元青花罐 · 钧窑花盆 · 定窑刻花碗 · 永乐青花压手杯 · 成化斗彩鸡缸杯', count:8 },
+  { file:'gold.png',        name:'金银器', priority:'p0',
+    artifacts:'鎏金舞马衔杯银壶 · 鸳鸯莲瓣纹金碗 · 金凤钗', count:3 },
+  { file:'stone.png',       name:'石器',   priority:'p0',
+    artifacts:'石刀 · 石磨盘', count:2 },
+  // P1 - 重要
+  { file:'terracotta.png',  name:'陶俑',   priority:'p1',
+    artifacts:'兵马俑将军俑 · 陶马俑', count:2 },
+  { file:'silk.png',        name:'丝织品', priority:'p1',
+    artifacts:'马王堆帛画 · 敦煌飞天壁画残片 · 联珠对兽纹锦 · 苏绣双面猫蝶图', count:4 },
+  { file:'ceramic.png',     name:'唐三彩', priority:'p1',
+    artifacts:'载乐骆驼俑 · 三彩马 · 供春紫砂壶', count:3 },
+  { file:'lacquer.png',     name:'漆器',   priority:'p1',
+    artifacts:'彩绘漆奁', count:1 },
+  { file:'painting.png',    name:'书画',   priority:'p1',
+    artifacts:'溪山行旅图残卷 · 文徵明书画折扇', count:2 },
+  // P2 - 少但独特
+  { file:'bone.png',        name:'骨器',   priority:'p2',
+    artifacts:'骨针', count:1 },
+  { file:'oracle_bone.png', name:'甲骨',   priority:'p2',
+    artifacts:'甲骨文', count:1 },
+  { file:'enamel.png',      name:'珐琅器', priority:'p2',
+    artifacts:'珐琅彩百花不露地瓶 · 套料雕花鼻烟壶', count:2 },
+  { file:'cloisonne.png',   name:'景泰蓝', priority:'p2',
+    artifacts:'景泰蓝龙纹大瓶', count:1 },
+  { file:'bamboo.png',      name:'竹简',   priority:'p2',
+    artifacts:'睡虎地秦简', count:1 },
+  { file:'bronze_chariot.png', name:'铜车马', priority:'p2',
+    artifacts:'铜车马', count:1 },
+  // P3 - 彩蛋
+  { file:'jade_suit.png',   name:'金缕玉衣', priority:'p3',
+    artifacts:'金缕玉衣', count:1 },
+  { file:'silver.png',      name:'银器',   priority:'p3',
+    artifacts:'银鎏金高足杯', count:1 },
 ];
 
-var grid=document.getElementById('grid');
-for(var i=0;i<items.length;i++){
-  var item=items[i];
-  var uid='i'+i;
-  var svg='<svg xmlns="http://www.w3.org/2000/svg" width="'+W+'" height="'+W+'" viewBox="0 0 '+W+' '+W+'">'+
-    '<defs><filter id="sh'+uid+'"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity="0.3"/></filter></defs>'+
-    '<g filter="url(#sh'+uid+')">'+item.draw(item.color,uid)+'</g></svg>';
-  var card=document.createElement('div');card.className='card';
-  card.innerHTML=svg;
-  card.innerHTML+='<div class="name">'+item.name+'</div>';
-  card.innerHTML+='<div class="info">'+item.era+' · '+item.rarity+'</div>';
-  grid.appendChild(card);
-}
+icons.forEach(icon => {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = `
+    <div class="img-wrap"><img src="assets/artifacts/${icon.file}" alt="${icon.name}" loading="lazy"></div>
+    <div class="type-name">${icon.name}</div>
+    <div class="filename">${icon.file}</div>
+    <div class="artifacts">${icon.artifacts}</div>
+    <div class="count">覆盖 ${icon.count} 件文物</div>
+  `;
+  const gridId = 'grid-' + icon.priority;
+  document.getElementById(gridId).appendChild(card);
+});
 </script>
+
 </body>
 </html>

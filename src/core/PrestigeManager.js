@@ -1,56 +1,140 @@
 /**
- * 声望/转生系统管理器
+ * 声望/转生系统管理器 — 六级阶梯制
+ * Lv.0→Lv.1: 100JP  | 解锁鉴定之眼
+ * Lv.1→Lv.2: 500JP  | 解锁博物馆
+ * Lv.2→Lv.3: 2000JP | 解锁科技考古+高风险遗址
+ * Lv.3→Lv.4: 10000JP| 解锁文物修复工坊
+ * Lv.4→Lv.5: 50000JP| 解锁学术休假(转生)
  */
 class PrestigeManager {
     constructor(gameState) {
         this.gameState = gameState;
     }
 
-    // 声望升级所需基金点
-    getPrestigeLevelUpCost(level) {
-        return Math.floor(100 * Math.pow(1.5, level));
+    /** 声望等级配置 */
+    static TIERS = [
+        { level: 0, name: '见习考古学家', threshold: 0,    color: '#c4784a',
+          unlock: '基础发掘', era: 'neolithic' },
+        { level: 1, name: '初级考古学家', threshold: 100,   color: '#5a7a5a',
+          unlock: '鉴定之眼', era: 'shangzhou' },
+        { level: 2, name: '中级考古学家', threshold: 500,   color: '#6b5b4f',
+          unlock: '博物馆', era: 'qinhan' },
+        { level: 3, name: '高级考古学家', threshold: 2000,  color: '#c9a227',
+          unlock: '科技考古+高风险遗址', era: 'tang' },
+        { level: 4, name: '资深考古学家', threshold: 10000, color: '#7fb3d5',
+          unlock: '文物修复工坊', era: 'songyuan' },
+        { level: 5, name: '首席考古学家', threshold: 50000, color: '#8e44ad',
+          unlock: '学术休假(转生)', era: 'mingqing' }
+    ];
+
+    /** 当前等级配置 */
+    getCurrentTier() {
+        const lv = this.calculatePrestigeLevel();
+        return PrestigeManager.TIERS[lv] || PrestigeManager.TIERS[0];
     }
 
-    // 计算声望等级
+    /** 下一级所需总 JP */
+    getNextThreshold() {
+        const lv = this.calculatePrestigeLevel();
+        if (lv >= 5) return null;
+        return PrestigeManager.TIERS[lv + 1].threshold;
+    }
+
+    /** 计算声望等级 — 基于累积 prestigePoints 阈值 */
     calculatePrestigeLevel() {
-        const points = this.gameState.prestigePoints;
-        // 每100点升一级
-        return Math.floor(points / 100);
+        const pts = this.gameState.prestigePoints;
+        for (let i = 5; i >= 0; i--) {
+            if (pts >= PrestigeManager.TIERS[i].threshold) return i;
+        }
+        return 0;
     }
 
-    // 检查是否可以升级声望 — 门槛从 10 降至 5，转生更频繁
+    /** 检查是否可以提升声望 */
     canPrestige() {
         return this.gameState.jackpotPointsThisRun >= 5;
     }
 
-    // 执行学术休假（转生）
-    doPrestige() {
-        const points = this.gameState.jackpotPointsThisRun;
+    /** 是否可以转生（满级后才解锁） */
+    canRebirth() {
+        return this.calculatePrestigeLevel() >= 5 && this.canPrestige();
+    }
 
+    /**
+     * 提升声望等级 — Lv.0~4 使用
+     * 累积 JP 到永久池，达到阈值自动升级
+     */
+    doAdvance() {
+        const points = this.gameState.jackpotPointsThisRun;
         if (points < 5) {
             return { success: false, message: '基金点不足，需要至少5点' };
         }
 
-        // 保存永久数据
+        const oldLevel = this.calculatePrestigeLevel();
+        this.gameState.prestigePoints += points;
+        const newLevel = this.calculatePrestigeLevel();
+        this.gameState.prestigeLevel = newLevel;
+
+        const leveledUp = newLevel > oldLevel;
+        let reward = null;
+        if (leveledUp) {
+            reward = this.getLevelUpReward(oldLevel, newLevel);
+        }
+
+        // 重置局内数据
+        this.resetForAdvance();
+
+        return {
+            success: true,
+            points: points,
+            oldLevel: oldLevel,
+            newLevel: newLevel,
+            leveledUp: leveledUp,
+            reward: reward,
+            message: leveledUp
+                ? `声望提升至 Lv.${newLevel} ${PrestigeManager.TIERS[newLevel].name}！`
+                : `获得 ${points} 基金点`
+        };
+    }
+
+    /**
+     * 执行学术休假（转生）— 仅 Lv.5 可用
+     */
+    doPrestige() {
+        const points = this.gameState.jackpotPointsThisRun;
+        if (points < 5) {
+            return { success: false, message: '基金点不足，需要至少5点' };
+        }
+
         this.gameState.prestigePoints += points;
         this.gameState.prestigeCount++;
         this.gameState.prestigeLevel = this.calculatePrestigeLevel();
 
-        // 获取转生奖励
         const reward = this.getPrestigeReward();
 
-        // 重置局内数据
         this.resetForPrestige();
 
         return {
             success: true,
             points: points,
             reward: reward,
-            message: `学术休假完成！获得 ${points} 基金点`
+            prestigeCount: this.gameState.prestigeCount,
+            message: `学术休假完成！转生次数: ${this.gameState.prestigeCount}`
         };
     }
 
-    // 获取转生奖励
+    /** Lv.0~4 升级时获取奖励通知 */
+    getLevelUpReward(oldLevel, newLevel) {
+        const unlocks = [];
+        for (let i = oldLevel + 1; i <= newLevel; i++) {
+            const tier = PrestigeManager.TIERS[i];
+            if (tier) {
+                unlocks.push(`🔓 Lv.${i}: ${tier.unlock}`);
+            }
+        }
+        return { unlocks: unlocks };
+    }
+
+    /** 转生奖励（仅 Lv.5 学术休假） */
     getPrestigeReward() {
         const count = this.gameState.prestigeCount;
         const rewards = [
@@ -59,18 +143,15 @@ class PrestigeManager {
             { name: '火眼金睛', effect: '国宝级文物概率 +5%', type: 'nationalChance', value: 0.05 },
             { name: '科技考古', effect: '开局获得基础设备', type: 'startEquipment', value: 1 }
         ];
-
-        // 前4次转生自动解锁
-        if (count < 4) {
-            return rewards[count];
+        if (count <= 4 && count > 0) {
+            return rewards[count - 1];
         }
-
         return null;
     }
 
-    // 转生后重置局内数据
-    resetForPrestige() {
-        this.gameState.funds = new BigNumber(10000); // 初始经费
+    /** 声望提升后重置（保留升级和文物图鉴） */
+    resetForAdvance() {
+        this.gameState.funds = new BigNumber(10000);
         this.gameState.currentEra = 'neolithic';
         this.gameState.currentSite = null;
         this.gameState.currentArtifact = null;
@@ -79,7 +160,7 @@ class PrestigeManager {
         this.gameState.totalAuthenticFound = 0;
         this.gameState.totalFakesFound = 0;
         this.gameState.jackpotPointsThisRun = 0;
-        this.gameState.discoveredArtifactIds = new Set();
+        this.gameState.earningsThisRun = 0;
         this.gameState.upgrades = {
             luck: 0,
             brushSize: 0,
@@ -89,53 +170,117 @@ class PrestigeManager {
         };
     }
 
-    // 获取永久加成
+    /** 转生后重置（全重置，保留永久数据） */
+    resetForPrestige() {
+        // 转生启动金：第2次转生起 +¥5,000，之后每次转生额外 +¥2,000
+        const count = this.gameState.prestigeCount;
+        let startFunds = 10000;
+        if (count >= 2) startFunds += 5000;  // 考古启动金
+        if (count >= 3) startFunds += (count - 2) * 2000;
+        this.gameState.funds = new BigNumber(startFunds);
+        this.gameState.currentEra = 'neolithic';
+        this.gameState.currentSite = null;
+        this.gameState.currentArtifact = null;
+        this.gameState.totalExcavations = 0;
+        this.gameState.totalArtifactsFound = 0;
+        this.gameState.totalAuthenticFound = 0;
+        this.gameState.totalFakesFound = 0;
+        this.gameState.jackpotPointsThisRun = 0;
+        this.gameState.earningsThisRun = 0;
+        this.gameState.discoveredArtifactIds = new Set();
+        // 转生奖励：第4次转生获得基础设备（挖掘范围+速度各+1级）
+        this.gameState.upgrades = {
+            luck: 0,
+            brushSize: count >= 4 ? 1 : 0,
+            excavationSpeed: count >= 4 ? 1 : 0,
+            artifactValue: 0,
+            appraisalAccuracy: 0
+        };
+    }
+
+    /** 获取收藏套装加成（供外部注入） */
+    getCollectionBonus(type) {
+        if (type === 'artifactValue') {
+            const completedSets = this.getCompletedSetCount();
+            return completedSets * 0.05; // 每套 +5%
+        }
+        return 0;
+    }
+
+    /** 计算已完成的收藏套装数量 */
+    getCompletedSetCount() {
+        const eraKeys = ['neolithic', 'shangzhou', 'qinhan', 'tang', 'songyuan', 'mingqing'];
+        let completed = 0;
+        eraKeys.forEach(era => {
+            const totalInEra = (ArtifactData[era] || []).length;
+            const collected = this.gameState.discoveredArtifactIds;
+            let count = 0;
+            (ArtifactData[era] || []).forEach(a => {
+                if (collected.has(a.id)) count++;
+            });
+            if (count >= totalInEra && totalInEra > 0) completed++;
+        });
+        return completed;
+    }
+
+    /** 获取永久加成（含转生+收藏套装） */
     getPermanentBonus(type) {
         let bonus = 0;
-
-        // 转生次数加成
         bonus += this.gameState.prestigeCount * 0.02;
-
-        // 特定转生奖励
-        if (this.gameState.prestigeCount >= 1) {
-            if (type === 'artifactValue') bonus += 0.25;
-        }
-        if (this.gameState.prestigeCount >= 3) {
-            if (type === 'nationalChance') bonus += 0.05;
-        }
-
+        if (this.gameState.prestigeCount >= 1 && type === 'artifactValue') bonus += 0.25;
+        if (this.gameState.prestigeCount >= 3 && type === 'nationalChance') bonus += 0.05;
+        // 收藏套装加成
+        bonus += this.getCollectionBonus(type);
         return bonus;
     }
 
-    // 获取可解锁的时代
+    /** 获取可解锁的时代 */
     getUnlockedEras() {
         const level = this.gameState.prestigeLevel;
         const eras = [];
-
-        // 初始解锁
-        eras.push('neolithic');
-
-        // 声望等级解锁
-        if (level >= 1) eras.push('shangzhou');
-        if (level >= 2) eras.push('qinhan');
-        if (level >= 3) eras.push('tang');
-        if (level >= 4) eras.push('songyuan');
-        if (level >= 5) eras.push('mingqing');
-
+        for (let i = 0; i <= level && i < PrestigeManager.TIERS.length; i++) {
+            eras.push(PrestigeManager.TIERS[i].era);
+        }
         return eras;
     }
 
-    // 获取当前可解锁新时代的基金点
+    /** 获取当前可解锁新时代的基金点 */
     getNextEraUnlockCost() {
         const level = this.gameState.prestigeLevel;
-        const costs = {
-            0: 100,   // 商周
-            1: 500,   // 秦汉
-            2: 2000,  // 唐
-            3: 10000, // 宋元
-            4: 50000  // 明清
-        };
-        return costs[level] || null;
+        if (level >= 5) return null;
+        const next = PrestigeManager.TIERS[level + 1];
+        return next ? next.threshold : null;
+    }
+
+    /** 获取预览信息（当前+后2级可见，再往后显示???） */
+    getTierPreview() {
+        const current = this.calculatePrestigeLevel();
+        const visible = Math.min(current + 3, PrestigeManager.TIERS.length);
+        const tiers = [];
+        for (let i = 0; i < PrestigeManager.TIERS.length; i++) {
+            const tier = PrestigeManager.TIERS[i];
+            if (i < visible) {
+                tiers.push({
+                    ...tier,
+                    visible: true,
+                    unlocked: i <= current,
+                    current: i === current
+                });
+            } else {
+                tiers.push({
+                    level: i,
+                    name: '???',
+                    threshold: tier.threshold,
+                    color: '#444444',
+                    unlock: '???',
+                    era: null,
+                    visible: false,
+                    unlocked: false,
+                    current: false
+                });
+            }
+        }
+        return tiers;
     }
 }
 

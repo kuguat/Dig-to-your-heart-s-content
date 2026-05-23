@@ -24,6 +24,24 @@ class BootScene extends Phaser.Scene {
         });
 
         loadingText.textContent = '正在初始化...';
+
+        // 图片加载失败时不阻塞
+        this.load.on('loaderror', (file) => {
+            console.warn('BootScene: 加载失败 - ' + file.key + ' (' + file.url + ')');
+        });
+
+        // 加载全部61件文物专属PNG图标
+        this._artifactIds = [];
+        for (const era of ['neolithic','shangzhou','qinhan','tang','songyuan','mingqing']) {
+            if (window.ArtifactData && window.ArtifactData[era]) {
+                for (const a of window.ArtifactData[era]) {
+                    const key = 'artifact_' + a.id;
+                    this._artifactIds.push(key);
+                    this.load.image(key, 'assets/artifacts/' + a.id + '.png');
+                }
+            }
+        }
+        console.log('BootScene: 预加载 ' + this._artifactIds.length + ' 件文物PNG');
     }
 
     create() {
@@ -55,16 +73,28 @@ class BootScene extends Phaser.Scene {
                 window.audioManager = null;
             }
 
-            // 生成占位纹理
-            console.log('BootScene: 开始生成纹理...');
+            // 生成 UI 占位纹理
+            console.log('BootScene: 开始生成 UI 纹理...');
             this.createAllTextures();
-            console.log('BootScene: 纹理生成完成');
+            console.log('BootScene: UI 纹理生成完成');
+            console.log('BootScene: 文物纹理已通过 PNG 预加载完成 (' + this._artifactIds.length + ' 件)');
 
             // 尝试加载存档
             if (window.saveManager.hasSave()) {
                 console.log('BootScene: 加载存档...');
                 window.saveManager.load();
             }
+
+            // [DEV TEST] 临时解锁全部文物 — 测试完记得删除
+            const allIds = [];
+            for (const era of ['neolithic','shangzhou','qinhan','tang','songyuan','mingqing']) {
+                if (window.ArtifactData[era]) {
+                    for (const a of window.ArtifactData[era]) allIds.push(a.id);
+                }
+            }
+            window.gameState.discoveredArtifactIds = new Set(allIds);
+            window.gameState.totalArtifactsFound = allIds.length;
+            console.log('BootScene: [TEST] 已解锁全部 ' + allIds.length + ' 件文物');
 
             // 加载音效（首次用户交互时激活 AudioContext）
             let audioUnlocked = false;
@@ -85,8 +115,15 @@ class BootScene extends Phaser.Scene {
             console.log('BootScene: 加载界面已隐藏');
             
             setTimeout(() => {
-                console.log('BootScene: 启动 MainScene');
-                this.scene.start('MainScene');
+                try {
+                    console.log('BootScene: 启动 MainScene');
+                    this.scene.start('MainScene');
+                } catch (e) {
+                    console.error('BootScene: 启动 MainScene 失败', e);
+                    document.getElementById('loading-screen').classList.remove('hidden');
+                    document.getElementById('loading-text').textContent =
+                        '启动失败: ' + (e.message || e);
+                }
             }, 300);
         } catch (error) {
             console.error('BootScene error:', error);
@@ -384,6 +421,8 @@ class BootScene extends Phaser.Scene {
         // 销毁 graphics 对象
         g.destroy();
     }
+
+
 }
 
 window.BootScene = BootScene;

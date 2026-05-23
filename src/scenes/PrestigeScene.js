@@ -1,5 +1,5 @@
-/**
- * 声望场景 - 技能树
+﻿/**
+ * 声望场景 - 六级阶梯 + 诱惑预览
  */
 class PrestigeScene extends Phaser.Scene {
     constructor() {
@@ -11,30 +11,45 @@ class PrestigeScene extends Phaser.Scene {
         this.prestigeManager = window.prestigeManager;
         this.audio = window.audioManager;
 
+        if (!this.state || !this.prestigeManager) {
+            console.error('PrestigeScene: 管理器缺失，返回主界面');
+            this.cameras.main.fadeOut(300, 26, 15, 10);
+            this.time.delayedCall(300, () => this.scene.start('MainScene'));
+            return;
+        }
+
         this.cameras.main.fadeIn(400, 26, 15, 10);
 
         this.createBackground();
-        this.createUI();
-        this.createPrestigeTree();
+        this.createHeader();
+        this.createTierTree();
+        this.createFooter();
     }
 
     createBackground() {
-        // 背景
+        const W = GameConfig.width;
+        const H = GameConfig.height;
+
         const bg = this.add.graphics();
         bg.fillStyle(0x1a0f0a, 1);
-        bg.fillRect(0, 0, this.config.width, this.config.height);
-    }
+        bg.fillRect(0, 0, W, H);
 
-    createUI() {
         // 顶部栏
         const topBar = this.add.graphics();
         topBar.fillStyle(0x2c1810, 1);
-        topBar.fillRect(0, 0, this.config.width, 60);
+        topBar.fillRect(0, 0, W, 60);
+        topBar.lineStyle(2, 0xd4a574, 0.4);
+        topBar.lineBetween(0, 60, W, 60);
+    }
+
+    createHeader() {
+        const W = GameConfig.width;
+        const font = GameConfig.typography.fontFamily;
 
         // 返回按钮
         const backBtn = this.add.text(20, 30, '← 返回', {
-            fontSize: '16px',
-            fontFamily: 'Microsoft YaHei',
+            fontSize: '17px',
+            fontFamily: font,
             color: '#d4a574',
             backgroundColor: '#3d2817',
             padding: { x: 12, y: 6 }
@@ -47,172 +62,220 @@ class PrestigeScene extends Phaser.Scene {
         });
 
         // 标题
-        this.add.text(this.config.width/2, 30, '⭐ 声望技能树', {
-            fontSize: '24px',
-            fontFamily: 'Microsoft YaHei',
+        const tier = this.prestigeManager.getCurrentTier();
+        this.add.text(W / 2, 30, '⭐ 声望等级 — ' + tier.name, {
+            fontSize: '26px',
+            fontFamily: font,
             color: '#f5e6d3',
             fontStyle: 'bold'
         }).setOrigin(0.5);
 
-        // 基金点显示
-        this.add.text(this.config.width - 30, 30, `基金点: ${this.state.prestigePoints} JP`, {
-            fontSize: '18px',
-            fontFamily: 'Microsoft YaHei',
+        // 基金点
+        this.add.text(W - 30, 20, '累积: ' + this.state.prestigePoints + ' JP', {
+            fontSize: '17px',
+            fontFamily: font,
             color: '#9b59b6'
-        }).setOrigin(1, 0.5);
-    }
+        }).setOrigin(1, 0);
 
-    createPrestigeTree() {
-        // 技能树容器
-        const startY = 100;
-        const nodeHeight = 80;
-
-        // 定义技能节点
-        const nodes = [
-            {
-                id: 'artifact_bonus',
-                name: '田野基本功',
-                desc: '所有文物价值 +25%',
-                cost: 50,
-                unlocked: this.state.prestigeCount >= 1,
-                branch: 'profit',
-                icon: 'icon_money'
-            },
-            {
-                id: 'start_funds',
-                name: '考古启动金',
-                desc: '新档获得 ¥5,000',
-                cost: 100,
-                unlocked: this.state.prestigeCount >= 2,
-                branch: 'profit',
-                icon: 'icon_money'
-            },
-            {
-                id: 'national_bonus',
-                name: '火眼金睛',
-                desc: '国宝概率 +5%',
-                cost: 150,
-                unlocked: this.state.prestigeCount >= 3,
-                branch: 'profit',
-                icon: 'icon_national'
-            },
-            {
-                id: 'start_equip',
-                name: '科技考古',
-                desc: '开局获得基础设备',
-                cost: 200,
-                unlocked: this.state.prestigeCount >= 4,
-                branch: 'automation',
-                icon: 'icon_excavate'
-            }
-        ];
-
-        // 绘制技能树
-        const centerX = this.config.width / 2;
-
-        // 标题
-        this.add.text(centerX, startY, '🔮 转生永久奖励（自动解锁）', {
-            fontSize: '18px',
-            fontFamily: 'Microsoft YaHei',
-            color: '#d4a574'
-        }).setOrigin(0.5);
-
-        // 绘制已解锁节点
-        nodes.forEach((node, idx) => {
-            const y = startY + 50 + idx * nodeHeight;
-            this.createNode(centerX, y, node, idx);
-        });
-
-        // 底部说明
-        this.add.text(centerX, this.config.height - 50,
-            '💡 每进行一次"学术休假"（转生），自动解锁下一层永久奖励', {
-            fontSize: '14px',
-            fontFamily: 'Microsoft YaHei',
+        this.add.text(W - 30, 44, '本局: ' + this.state.jackpotPointsThisRun + ' JP', {
+            fontSize: '15px',
+            fontFamily: font,
             color: '#8b7355'
-        }).setOrigin(0.5);
-
-        // 当前转生次数
-        this.add.text(centerX, this.config.height - 25,
-            `当前转生次数: ${this.state.prestigeCount} / 4（全部解锁）`, {
-            fontSize: '16px',
-            fontFamily: 'Microsoft YaHei',
-            color: '#9b59b6'
-        }).setOrigin(0.5);
+        }).setOrigin(1, 0);
     }
 
-    createNode(x, y, node, index) {
-        const container = this.add.container(x, y);
+    createTierTree() {
+        const tiers = this.prestigeManager.getTierPreview();
+        const startY = 90;
+        const tierH = 80;
+        const gapY = 12;
+        const centerX = GameConfig.width / 2;
 
-        // 节点背景
+        tiers.forEach((tier, idx) => {
+            const y = startY + idx * (tierH + gapY);
+            this.createTierNode(centerX, y, tier, idx);
+        });
+    }
+
+    createTierNode(cx, y, tier, idx) {
+        const w = 580;
+        const h = 76;
+        const font = GameConfig.typography.fontFamily;
+        const container = this.add.container(cx, y);
+
+        // 背景卡片
         const bg = this.add.graphics();
-        bg.fillStyle(node.unlocked ? 0x3d2817 : 0x2c1810, 1);
-        bg.fillRoundedRect(-180, -30, 360, 55, 10);
-
-        if (node.unlocked) {
-            bg.lineStyle(2, 0x27ae60, 0.8);
+        if (tier.current) {
+            bg.fillStyle(0x3d2817, 1);
+            bg.lineStyle(3, 0xd4a574, 1);
+        } else if (tier.unlocked) {
+            bg.fillStyle(0x2a1a0f, 1);
+            bg.lineStyle(1, 0x555555, 0.5);
+        } else if (tier.visible) {
+            bg.fillStyle(0x1f1208, 1);
+            bg.lineStyle(1, 0x444444, 0.4);
         } else {
-            bg.lineStyle(2, 0x555555, 0.5);
+            bg.fillStyle(0x151012, 1);
+            bg.lineStyle(1, 0x333333, 0.3);
         }
-        bg.strokeRoundedRect(-180, -30, 360, 55, 10);
+        bg.fillRoundedRect(-w / 2, -h / 2, w, h, 10);
+        bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 10);
         container.add(bg);
 
-        // 序号
+        // 等级数字圆
         const numCircle = this.add.graphics();
-        if (node.unlocked) {
+        const numX = -w / 2 + 40;
+        if (tier.current) {
+            numCircle.fillStyle(this._parseColor(tier.color), 1);
+        } else if (tier.unlocked) {
             numCircle.fillStyle(0x27ae60, 1);
         } else {
-            numCircle.fillStyle(0x555555, 1);
+            numCircle.fillStyle(0x444444, 1);
         }
-        numCircle.fillCircle(-150, 0, 15);
+        numCircle.fillCircle(numX, 0, 20);
         container.add(numCircle);
 
-        container.add(this.add.text(-150, 0, (index + 1).toString(), {
-            fontSize: '14px',
-            fontFamily: 'Microsoft YaHei',
-            color: '#ffffff'
-        }).setOrigin(0.5));
-
-        // 图标
-        container.add(this.add.image(-110, 0, node.icon).setScale(0.7));
-
-        // 名称
-        const nameColor = node.unlocked ? '#f5e6d3' : '#666666';
-        container.add(this.add.text(-70, -8, node.name, {
-            fontSize: '16px',
-            fontFamily: 'Microsoft YaHei',
-            color: nameColor,
+        container.add(this.add.text(numX, 0, 'Lv.' + tier.level, {
+            fontSize: '15px',
+            fontFamily: font,
+            color: '#ffffff',
             fontStyle: 'bold'
-        }));
-
-        // 描述
-        const descColor = node.unlocked ? '#8b7355' : '#555555';
-        container.add(this.add.text(-70, 12, node.desc, {
-            fontSize: '13px',
-            fontFamily: 'Microsoft YaHei',
-            color: descColor
-        }));
-
-        // 状态标签
-        const statusText = node.unlocked ? '✓ 已解锁' : `需要 ${node.cost} JP`;
-        const statusColor = node.unlocked ? '#27ae60' : '#666666';
-        container.add(this.add.text(120, 0, statusText, {
-            fontSize: '14px',
-            fontFamily: 'Microsoft YaHei',
-            color: statusColor
         }).setOrigin(0.5));
 
-        // 连接线
-        if (index > 0) {
-            const line = this.add.graphics();
-            line.lineStyle(2, node.unlocked ? 0x27ae60 : 0x3d2817, 0.5);
-            line.lineBetween(x, y - nodeHeight + 25, x, y - 30);
+        // 等级名称
+        const nameX = numX + 35;
+        const nameColor = tier.current ? '#f4d03f' : (tier.unlocked ? '#f5e6d3' : '#666666');
+        container.add(this.add.text(nameX, -10, tier.name, {
+            fontSize: tier.current ? '20px' : '17px',
+            fontFamily: font,
+            color: nameColor,
+            fontStyle: tier.current ? 'bold' : 'normal'
+        }));
+
+        // 解锁内容
+        if (tier.visible) {
+            var detailColor = tier.visible && !tier.unlocked ? tier.color : '#8b7355';
+            var unlockText = tier.unlock;
+            if (tier.current) unlockText = '✨ ' + unlockText + ' ✨';
+            container.add(this.add.text(nameX, 14, unlockText, {
+                fontSize: '14px',
+                fontFamily: font,
+                color: detailColor
+            }));
+        } else {
+            container.add(this.add.text(nameX, 14, '🔒 未知能力', {
+                fontSize: '14px',
+                fontFamily: font,
+                color: '#444444'
+            }));
         }
 
-        return container;
+        // 右侧状态
+        const statusX = w / 2 - 40;
+        if (tier.current) {
+            const next = this.prestigeManager.getNextThreshold();
+            if (next !== null) {
+                const progress = Math.min(1, this.state.prestigePoints / next);
+                const pct = Math.floor(progress * 100);
+                container.add(this.add.text(statusX, -12, pct + '%', {
+                    fontSize: '17px',
+                    fontFamily: font,
+                    color: '#f4d03f',
+                    fontStyle: 'bold'
+                }).setOrigin(1, 0.5));
+
+                container.add(this.add.text(statusX, 12, this.state.prestigePoints + '/' + next + ' JP', {
+                    fontSize: '12px',
+                    fontFamily: font,
+                    color: '#8b7355'
+                }).setOrigin(1, 0.5));
+
+                // 小进度条
+                const barW = 80;
+                const barX = statusX - barW - 15;
+                const barG = this.add.graphics();
+                barG.fillStyle(0x1a0f0a, 1);
+                barG.fillRoundedRect(barX, -4, barW, 8, 4);
+                barG.fillStyle(this._parseColor(tier.color), 1);
+                barG.fillRoundedRect(barX, -4, barW * progress, 8, 4);
+                container.add(barG);
+            } else {
+                container.add(this.add.text(statusX, 0, '🔮 可转生', {
+                    fontSize: '15px',
+                    fontFamily: font,
+                    color: '#9b59b6',
+                    fontStyle: 'bold'
+                }).setOrigin(1, 0.5));
+            }
+        } else if (tier.unlocked) {
+            container.add(this.add.text(statusX, 0, '✅ 已解锁', {
+                fontSize: '15px',
+                fontFamily: font,
+                color: '#27ae60'
+            }).setOrigin(1, 0.5));
+        } else if (tier.visible) {
+            container.add(this.add.text(statusX, 0, tier.threshold + ' JP', {
+                fontSize: '15px',
+                fontFamily: font,
+                color: '#9b59b6'
+            }).setOrigin(1, 0.5));
+        } else {
+            container.add(this.add.text(statusX, 0, '??? JP', {
+                fontSize: '15px',
+                fontFamily: font,
+                color: '#444444'
+            }).setOrigin(1, 0.5));
+        }
+
+        // 连接线（下一级）
+        if (idx < 5) {
+            const lineG = this.add.graphics();
+            const lineColor = tier.unlocked ? 0x27ae60 : 0x3d2817;
+            lineG.lineStyle(2, lineColor, tier.unlocked ? 0.6 : 0.3);
+            const gapY = 12;
+            lineG.lineBetween(cx, y + h / 2, cx, y + h / 2 + gapY);
+        }
     }
 
-    get config() {
-        return GameConfig;
+    createFooter() {
+        const W = GameConfig.width;
+        const H = GameConfig.height;
+        const font = GameConfig.typography.fontFamily;
+        const y = H - 45;
+        const currentTier = this.prestigeManager.getCurrentTier();
+        const nextThreshold = this.prestigeManager.getNextThreshold();
+
+        if (currentTier.level >= 5) {
+            this.add.text(W / 2, y - 15,
+                '💡 已达满级！使用学术休假（转生）换取永久加成', {
+                fontSize: '15px',
+                fontFamily: font,
+                color: '#9b59b6'
+            }).setOrigin(0.5);
+
+            this.add.text(W / 2, y + 15,
+                '已转生 ' + this.state.prestigeCount + ' 次 | 每转 +2% 全属性', {
+                fontSize: '14px',
+                fontFamily: font,
+                color: '#8b7355'
+            }).setOrigin(0.5);
+        } else if (nextThreshold !== null) {
+            this.add.text(W / 2, y,
+                '💡 达到 ' + nextThreshold + ' JP 即可升至 Lv.' + (currentTier.level + 1),
+                {
+                    fontSize: '15px',
+                    fontFamily: font,
+                    color: '#8b7355'
+                }).setOrigin(0.5);
+        }
+    }
+
+    /**
+     * 安全地将 '#rrggbb' 颜色字符串转为整数
+     */
+    _parseColor(str) {
+        if (!str) return 0x444444;
+        return parseInt(str.replace('#', '0x'), 16) || 0x444444;
     }
 }
 
