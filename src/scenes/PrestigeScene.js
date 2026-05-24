@@ -86,7 +86,7 @@ class PrestigeScene extends Phaser.Scene {
 
     createTierTree() {
         const tiers = this.prestigeManager.getTierPreview();
-        const startY = 90;
+        const startY = 130;
         const tierH = 80;
         const gapY = 12;
         const centerX = GameConfig.width / 2;

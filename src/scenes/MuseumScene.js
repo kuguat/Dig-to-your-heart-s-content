@@ -108,7 +108,8 @@ class MuseumScene extends Phaser.Scene {
 
         this.nextBtn.on('pointerdown', () => {
             const list = this.getFilteredArtifacts();
-            const totalPages = Math.ceil(list.length / this.itemsPerPage);
+            const pp = (this.state.prestigeLevel >= 2) ? 9 : 12;
+            const totalPages = Math.ceil(list.length / pp);
             if (this.currentPage < totalPages - 1) {
                 this.displayPage(this.currentPage + 1);
             }
@@ -274,14 +275,17 @@ class MuseumScene extends Phaser.Scene {
         }
         this.itemContainers = [];
 
+        const hasPanel = this.state.prestigeLevel >= 2;
+        const itemsPerPage = hasPanel ? 9 : 12;
+
         const list = this.getFilteredArtifacts();
-        const startIdx = page * this.itemsPerPage;
-        const endIdx = Math.min(startIdx + this.itemsPerPage, list.length);
+        const startIdx = page * itemsPerPage;
+        const endIdx = Math.min(startIdx + itemsPerPage, list.length);
         const pageItems = list.slice(startIdx, endIdx);
 
-        // 布局：4列 × 3行 = 12件/页
-        const cols = 4;
-        const startX = 100;
+        // 布局：有收藏家面板时 3列 × 3行(9件/页)，否则 4列 × 3行(12件/页)
+        const cols = hasPanel ? 3 : 4;
+        const startX = hasPanel ? 310 : 100;
         const startY = 125;
         const itemWidth = 250;
         const itemHeight = 160;
@@ -299,7 +303,7 @@ class MuseumScene extends Phaser.Scene {
         });
 
         // 更新页码
-        const totalPages = Math.ceil(list.length / this.itemsPerPage);
+        const totalPages = Math.ceil(list.length / itemsPerPage);
         if (totalPages > 0) {
             const filterLabel = this.currentRarityFilter !== 'all'
                 ? ` (${list.length}件)`
@@ -549,29 +553,40 @@ class MuseumScene extends Phaser.Scene {
     }
 
     /**
-     * 收藏家套装面板 — 显示各朝代收集进度与加成
+     * 收藏家套装面板 — 左侧竖列，显示各朝代收集进度与加成
      */
     createSetBonusPanel() {
         if (this.state.prestigeLevel < 2) return;
 
         const panelX = 10;
-        const panelY = 310;
-        const panelH = 140;
+        const panelY = 125;
+        const panelW = 280;
+        const rowH = 32;
+        const eraRows = 6;
+        const titleH = 35;
+        const bonusH = 32;
+        const panelH = titleH + eraRows * rowH + bonusH;
 
-        const bg = this.add.graphics();
+        // 面板背景
+        const bg = this.add.graphics().setDepth(8);
         bg.fillStyle(0x2c1810, 0.95);
-        bg.fillRoundedRect(panelX, panelY, 280, panelH, 10);
+        bg.fillRoundedRect(panelX, panelY, panelW, panelH, 10);
         bg.lineStyle(2, 0xd4a574, 0.3);
-        bg.strokeRoundedRect(panelX, panelY, 280, panelH, 10);
+        bg.strokeRoundedRect(panelX, panelY, panelW, panelH, 10);
 
-        this.add.text(panelX + 140, panelY - 5, '🎖️ 收藏家奖励', {
+        // 标题
+        this.add.text(panelX + panelW / 2, panelY + 18, '🎖️ 收藏家奖励', {
             fontSize: '17px', fontFamily: GameConfig.typography.fontFamily,
             color: '#d4a574', fontStyle: 'bold'
-        }).setOrigin(0.5);
+        }).setOrigin(0.5).setDepth(9);
+
+        // 分隔线
+        const sep = this.add.graphics().setDepth(9);
+        sep.lineStyle(1, 0xd4a574, 0.2);
+        sep.lineBetween(panelX + 20, panelY + titleH, panelX + panelW - 20, panelY + titleH);
 
         const eraKeys = ['neolithic', 'shangzhou', 'qinhan', 'tang', 'songyuan', 'mingqing'];
         const eraNames = ['新石器', '商周', '秦汉', '盛唐', '宋元', '明清'];
-        const eraColors = ['#c4784a', '#5a7a5a', '#6b5b4f', '#c9a227', '#7fb3d5', '#8e44ad'];
 
         let bonusTotal = 0;
         eraKeys.forEach((era, i) => {
@@ -579,31 +594,57 @@ class MuseumScene extends Phaser.Scene {
             const collected = this.collectedArtifacts.filter(a => a.era === era).length;
             const complete = collected >= totalInEra && totalInEra > 0;
 
-            const row = Math.floor(i / 2);
-            const col = i % 2;
-            const x = panelX + 20 + col * 130;
-            const y = panelY + 30 + row * 35;
-
+            const y = panelY + titleH + 4 + i * rowH + rowH / 2;
             const check = complete ? '✅' : (collected > 0 ? '🔶' : '⬜');
-            const name = eraNames[i];
             const count = `${collected}/${totalInEra}`;
             const color = complete ? '#27ae60' : (collected > 0 ? '#f39c12' : '#555555');
+            const pct = totalInEra > 0 ? Math.round(collected / totalInEra * 100) : 0;
 
-            this.add.text(x, y, `${check} ${name}: ${count}`, {
+            // 进度条背景
+            const barX = panelX + 20;
+            const barY = y - 9;
+            const barW = panelW - 100;
+            const barH = 18;
+            const barBg = this.add.graphics().setDepth(9);
+            barBg.fillStyle(0x1a0f0a, 1);
+            barBg.fillRoundedRect(barX, barY, barW, barH, 4);
+
+            // 进度条填充
+            if (pct > 0) {
+                const barFill = this.add.graphics().setDepth(9);
+                const fillColor = complete ? 0x27ae60 : (collected > 0 ? 0xf39c12 : 0x555555);
+                const fillW = Math.max(barW * pct / 100, 4);
+                barFill.fillStyle(fillColor, 0.5);
+                barFill.fillRoundedRect(barX, barY, fillW, barH, 4);
+            }
+
+            // 朝代标签 (进度条上方)
+            this.add.text(barX + 4, barY + barH / 2, `${check} ${eraNames[i]}`, {
                 fontSize: '13px', fontFamily: GameConfig.typography.fontFamily, color: color
-            });
+            }).setOrigin(0, 0.5).setDepth(10);
+
+            // 数量 (进度条右侧)
+            this.add.text(barX + barW + 6, barY + barH / 2, count, {
+                fontSize: '12px', fontFamily: GameConfig.typography.fontFamily, color: color
+            }).setOrigin(0, 0.5).setDepth(10);
 
             if (complete) bonusTotal += 5;
         });
 
+        // 分隔线
+        const sep2 = this.add.graphics().setDepth(9);
+        const bonusY = panelY + titleH + eraRows * rowH;
+        sep2.lineStyle(1, 0xd4a574, 0.2);
+        sep2.lineBetween(panelX + 20, bonusY, panelX + panelW - 20, bonusY);
+
         // 总加成显示
         const bonusPct = bonusTotal;
-        this.setBonusText = this.add.text(panelX + 140, panelY + 125,
-            bonusPct > 0 ? `累计加成: 文物价值 +${bonusPct}%` : '集齐任一套装获得文物价值 +5%',
+        this.setBonusText = this.add.text(panelX + panelW / 2, bonusY + bonusH / 2,
+            bonusPct > 0 ? `累计加成: 文物价值 +${bonusPct}%` : '集齐任一套装获得 +5%',
             {
-                fontSize: '14px', fontFamily: GameConfig.typography.fontFamily,
+                fontSize: '13px', fontFamily: GameConfig.typography.fontFamily,
                 color: bonusPct > 0 ? '#f4d03f' : '#8b7355'
-            }).setOrigin(0.5);
+            }).setOrigin(0.5).setDepth(10);
 
         this._setBonusPct = bonusPct;
     }

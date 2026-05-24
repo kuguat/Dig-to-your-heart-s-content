@@ -85,17 +85,6 @@ class BootScene extends Phaser.Scene {
                 window.saveManager.load();
             }
 
-            // [DEV TEST] 临时解锁全部文物 — 测试完记得删除
-            const allIds = [];
-            for (const era of ['neolithic','shangzhou','qinhan','tang','songyuan','mingqing']) {
-                if (window.ArtifactData[era]) {
-                    for (const a of window.ArtifactData[era]) allIds.push(a.id);
-                }
-            }
-            window.gameState.discoveredArtifactIds = new Set(allIds);
-            window.gameState.totalArtifactsFound = allIds.length;
-            console.log('BootScene: [TEST] 已解锁全部 ' + allIds.length + ' 件文物');
-
             // 加载音效（首次用户交互时激活 AudioContext）
             let audioUnlocked = false;
             const resumeAudio = () => {

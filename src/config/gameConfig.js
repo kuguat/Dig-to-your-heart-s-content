@@ -36,7 +36,7 @@ const GameConfig = {
         shangzhou: '#5a7a5a',    // 商周（青铜绿）
         qinhan: '#6b5b4f',       // 秦汉（黑灰）
         tang: '#c9a227',         // 唐（金色）
-        song: '#7fb3d5',          // 宋（青白）
+        songyuan: '#7fb3d5',          // 宋元（青白）
         mingqing: '#8e44ad'       // 明清（紫）
     },
 
@@ -70,8 +70,8 @@ const GameConfig = {
         }
     },
 
-    // 调试模式
-    debug: true
+    // 调试模式（开发时 true，发布前改 false）
+    debug: false
 };
 
 /**

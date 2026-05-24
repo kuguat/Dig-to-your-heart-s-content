@@ -106,7 +106,7 @@ class MainScene extends Phaser.Scene {
         const prestigeIcon = this.add.image(60, headerY, 'icon_prestige').setScale(0.8)
             .setInteractive({ useHandCursor: true });
         this.prestigeText = this.add.text(85, headerY - 8, `声望 Lv.${this.state.prestigeLevel}`, {
-            fontSize: '18px', fontFamily: 'Microsoft YaHei', color: '#d4a574'
+            fontSize: '18px', fontFamily: GameConfig.typography.fontFamily, color: '#d4a574'
         }).setInteractive({ useHandCursor: true });
 
         const gotoPrestige = () => {
@@ -123,7 +123,7 @@ class MainScene extends Phaser.Scene {
         const jpIcon = this.add.image(195, headerY, 'icon_prestige2').setScale(0.8)
             .setInteractive({ useHandCursor: true });
         this.jpText = this.add.text(220, headerY - 8, `${this.state.prestigePoints} JP`, {
-            fontSize: '18px', fontFamily: 'Microsoft YaHei', color: '#9b59b6'
+            fontSize: '18px', fontFamily: GameConfig.typography.fontFamily, color: '#9b59b6'
         }).setInteractive({ useHandCursor: true });
 
         jpIcon.on('pointerdown', gotoPrestige);
@@ -133,7 +133,7 @@ class MainScene extends Phaser.Scene {
 
         this.add.image(330, headerY, 'icon_money').setScale(0.8);
         this.fundsText = this.add.text(355, headerY - 8, `¥${this.formatMoney(this.state.funds.toNumber())}`, {
-            fontSize: '22px', fontFamily: 'Microsoft YaHei', color: '#f4d03f', fontStyle: 'bold'
+            fontSize: '22px', fontFamily: GameConfig.typography.fontFamily, color: '#f4d03f', fontStyle: 'bold'
         });
 
         this.eraButtons = [];
@@ -149,7 +149,7 @@ class MainScene extends Phaser.Scene {
         eras.forEach((era, index) => {
             const x = 540 + index * 120;
             const btn = this.add.text(x, headerY, era.name, {
-                fontSize: '16px', fontFamily: 'Microsoft YaHei',
+                fontSize: '16px', fontFamily: GameConfig.typography.fontFamily,
                 color: index === 0 ? '#d4a574' : '#8b7355',
                 backgroundColor: index === 0 ? '0x3d2817' : '0x2c1810',
                 padding: { x: 15, y: 5 }
@@ -190,14 +190,14 @@ class MainScene extends Phaser.Scene {
         // 提示文字
         this.promptText = this.add.text(ex.x + ex.width/2, ex.y + ex.height/2,
             '选择发掘层位开始考古', {
-                fontSize: '20px', fontFamily: 'Microsoft YaHei',
+                fontSize: '20px', fontFamily: GameConfig.typography.fontFamily,
                 color: '#8b7355', align: 'center'
             }).setOrigin(0.5);
 
         // 层位选择区域 —— 加分隔线与发掘区拉开距离
         this.siteSeparator = this.add.graphics();
         this.siteSeparator.lineStyle(1, 0xd4a574, 0.25);
-        this.siteSeparator.lineBetween(ex.x, ex.y + ex.height + 32, ex.x + ex.width, ex.y + ex.height + 32);
+        this.siteSeparator.lineBetween(ex.x, ex.y + ex.height + 48, ex.x + ex.width, ex.y + ex.height + 48);
 
         // ── 科技考古按钮（Lv.3+ 解锁）──
         this.techArchaeologyBtn = null;
@@ -207,7 +207,7 @@ class MainScene extends Phaser.Scene {
         }
 
         this.siteButtons = [];
-        const siteY = ex.y + ex.height + 55;
+        const siteY = ex.y + ex.height + 76;
         this.createSiteButtons(siteY);
     }
 
@@ -239,13 +239,13 @@ class MainScene extends Phaser.Scene {
         container.add(bg);
 
         const nameText = this.add.text(0, -10, site.name, {
-            fontSize: '14px', fontFamily: 'Microsoft YaHei', color: '#d4a574'
+            fontSize: '14px', fontFamily: GameConfig.typography.fontFamily, color: '#d4a574'
         }).setOrigin(0.5);
         container.add(nameText);
 
         const costLabel = site.cost === 0 ? '免费' : `¥${new BigNumber(site.cost).toString()}`;
         const costText = this.add.text(0, 10, costLabel, {
-            fontSize: '12px', fontFamily: 'Microsoft YaHei',
+            fontSize: '12px', fontFamily: GameConfig.typography.fontFamily,
             color: site.cost === 0 ? '#27ae60' : '#f4d03f'
         }).setOrigin(0.5);
         container.add(costText);
@@ -254,7 +254,7 @@ class MainScene extends Phaser.Scene {
             site.risk > 0.05 ? '中风险' : '低风险';
         const riskColor = site.risk > 0.2 ? '#e74c3c' : (site.risk > 0.05 ? '#f39c12' : '#27ae60');
         const riskText = this.add.text(50, -10, riskLabel, {
-            fontSize: '10px', fontFamily: 'Microsoft YaHei', color: riskColor
+            fontSize: '10px', fontFamily: GameConfig.typography.fontFamily, color: riskColor
         }).setOrigin(0.5);
         container.add(riskText);
 
@@ -274,34 +274,50 @@ class MainScene extends Phaser.Scene {
 
     // ── 科技考古：Lv.3 解锁，切换开关 ──
     createTechArchaeologyToggle(ex) {
-        const y = ex.y + ex.height + 10;
-        const labelX = ex.x + ex.width - 120;
+        const y = ex.y - 32;
+        const labelX = ex.x + ex.width - 10;
 
-        this.techArchaeologyLabel = this.add.text(labelX, y, '🤖 科技考古：关', {
-            fontSize: '13px', fontFamily: 'Microsoft YaHei', color: '#8b7355',
-            backgroundColor: '#2c1810', padding: { x: 10, y: 4 }
-        }).setOrigin(1, 0).setInteractive({ useHandCursor: true }).setDepth(5);
+        this.techArchaeologyLabel = this.add.text(labelX, y, '🤖 科技考古', {
+            fontSize: '12px', fontFamily: GameConfig.typography.fontFamily, color: '#8b7355',
+            backgroundColor: '#2c1810', padding: { x: 8, y: 3 }
+        }).setOrigin(1, 0).setInteractive({ useHandCursor: true }).setDepth(15);
 
         this.techArchaeologyLabel.on('pointerdown', () => {
             this.techArchaeologyEnabled = !this.techArchaeologyEnabled;
             if (this.techArchaeologyEnabled) {
-                this.techArchaeologyLabel.setText('🤖 科技考古：开');
+                this.techArchaeologyLabel.setText('🤖 科技考古 ✓');
                 this.techArchaeologyLabel.setColor('#27ae60');
                 this.techArchaeologyLabel.setStyle({
-                    fontSize: '13px', fontFamily: 'Microsoft YaHei', color: '#27ae60',
-                    backgroundColor: '#1a3d1a', padding: { x: 10, y: 4 }
+                    fontSize: '12px', fontFamily: GameConfig.typography.fontFamily, color: '#27ae60',
+                    backgroundColor: '#1a3d1a', padding: { x: 8, y: 3 }
                 });
                 this.showMessage('🤖 科技考古已开启：点击层位即可自动出土文物');
             } else {
-                this.techArchaeologyLabel.setText('🤖 科技考古：关');
+                this.techArchaeologyLabel.setText('🤖 科技考古');
                 this.techArchaeologyLabel.setColor('#8b7355');
                 this.techArchaeologyLabel.setStyle({
-                    fontSize: '13px', fontFamily: 'Microsoft YaHei', color: '#8b7355',
-                    backgroundColor: '#2c1810', padding: { x: 10, y: 4 }
+                    fontSize: '12px', fontFamily: GameConfig.typography.fontFamily, color: '#8b7355',
+                    backgroundColor: '#2c1810', padding: { x: 8, y: 3 }
                 });
                 this.showMessage('切回手动刮土模式');
             }
         });
+    }
+
+    // ── 文物修复工坊按钮（Lv.4 解锁，升级动态创建）──
+    createRepairWorkshopBtn() {
+        const panelX = this.config.width - 300;
+        const panelY = 180;
+        this.workshopBtn = this.add.text(panelX + 140, panelY + 140, '🔧 文物修复工坊', {
+            fontSize: '14px', fontFamily: GameConfig.typography.fontFamily, color: '#7fb3d5',
+            backgroundColor: '#1a2d3d', padding: { x: 14, y: 6 }
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        this.workshopBtn.on('pointerdown', () => {
+            if (this.audio) this.audio.click();
+            this.cameras.main.fadeOut(300, 26, 15, 10);
+            this.time.delayedCall(300, () => this.scene.start('RepairWorkshopScene'));
+        });
+        this.addButtonEffects(this.workshopBtn);
     }
 
     createLeftPanel() {
@@ -316,7 +332,7 @@ class MainScene extends Phaser.Scene {
         panelBg.strokeRoundedRect(panelX, panelY, 280, panelH, 12);
 
         this.add.text(panelX + 140, panelY + 20, '📦 发掘统计', {
-            fontSize: '16px', fontFamily: 'Microsoft YaHei', color: '#d4a574', fontStyle: 'bold'
+            fontSize: '16px', fontFamily: GameConfig.typography.fontFamily, color: '#d4a574', fontStyle: 'bold'
         }).setOrigin(0.5);
 
         const stats = [
@@ -332,10 +348,10 @@ class MainScene extends Phaser.Scene {
             const y = panelY + 55 + index * 38;
             this.add.image(panelX + 25, y, stat.icon).setScale(0.6);
             this.add.text(panelX + 50, y - 5, stat.label + ':', {
-                fontSize: '14px', fontFamily: 'Microsoft YaHei', color: '#8b7355'
+                fontSize: '14px', fontFamily: GameConfig.typography.fontFamily, color: '#8b7355'
             });
             this.statTexts[stat.key] = this.add.text(panelX + 240, y - 5, '0', {
-                fontSize: '14px', fontFamily: 'Microsoft YaHei', color: '#f5e6d3', fontStyle: 'bold'
+                fontSize: '14px', fontFamily: GameConfig.typography.fontFamily, color: '#f5e6d3', fontStyle: 'bold'
             }).setOrigin(1, 0);
         });
 
@@ -346,7 +362,7 @@ class MainScene extends Phaser.Scene {
 
         const upgradeTitleY = dividerY + 20;
         this.add.text(panelX + 140, upgradeTitleY, '⬆️ 局内升级', {
-            fontSize: '14px', fontFamily: 'Microsoft YaHei', color: '#d4a574'
+            fontSize: '14px', fontFamily: GameConfig.typography.fontFamily, color: '#d4a574'
         }).setOrigin(0.5);
 
         const upgrades = [
@@ -392,16 +408,16 @@ class MainScene extends Phaser.Scene {
         // 单行排列：图标(12) 名称(26) 效果(86) Lv(173中心) ¥(230中心)
         container.add(this.add.image(12, 0, upgrade.icon).setScale(0.5));
         container.add(this.add.text(26, 0, upgrade.name, {
-            fontSize: '13px', fontFamily: 'Microsoft YaHei', color: mainColor
+            fontSize: '13px', fontFamily: GameConfig.typography.fontFamily, color: mainColor
         }).setOrigin(0, 0.5));
         container.add(this.add.text(86, 0, effectDescs[upgrade.id] || '', {
-            fontSize: '11px', fontFamily: 'Microsoft YaHei', color: subColor
+            fontSize: '11px', fontFamily: GameConfig.typography.fontFamily, color: subColor
         }).setOrigin(0, 0.5));
         container.add(this.add.text(173, 0, `Lv.${level}/${maxLevel}`, {
-            fontSize: '11px', fontFamily: 'Microsoft YaHei', color: '#8b7355'
+            fontSize: '11px', fontFamily: GameConfig.typography.fontFamily, color: '#8b7355'
         }).setOrigin(0.5, 0.5));
         container.add(this.add.text(230, 0, `¥${cost}`, {
-            fontSize: '13px', fontFamily: 'Microsoft YaHei', fontStyle: 'bold',
+            fontSize: '13px', fontFamily: GameConfig.typography.fontFamily, fontStyle: 'bold',
             color: canAfford ? '#f4d03f' : '#666666'
         }).setOrigin(0.5, 0.5));
 
@@ -435,11 +451,11 @@ class MainScene extends Phaser.Scene {
         panelBg.strokeRoundedRect(panelX, panelY, 280, 500, 12);
 
         this.add.text(panelX + 140, panelY + 20, '🏛️ 博物馆', {
-            fontSize: '16px', fontFamily: 'Microsoft YaHei', color: '#d4a574', fontStyle: 'bold'
+            fontSize: '16px', fontFamily: GameConfig.typography.fontFamily, color: '#d4a574', fontStyle: 'bold'
         }).setOrigin(0.5);
 
         const museumBtn = this.add.text(panelX + 140, panelY + 60, '📜 查看图鉴', {
-            fontSize: '16px', fontFamily: 'Microsoft YaHei', color: '#f5e6d3',
+            fontSize: '16px', fontFamily: GameConfig.typography.fontFamily, color: '#f5e6d3',
             backgroundColor: '#3d2817', padding: { x: 20, y: 10 }
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         museumBtn.on('pointerdown', () => {
@@ -451,25 +467,15 @@ class MainScene extends Phaser.Scene {
         // 博物馆出土数显示
 
         this.add.text(panelX + 20, panelY + 110, '本局收获:', {
-            fontSize: '14px', fontFamily: 'Microsoft YaHei', color: '#8b7355'
+            fontSize: '14px', fontFamily: GameConfig.typography.fontFamily, color: '#8b7355'
         });
         this.gainText = this.add.text(panelX + 140, panelY + 110, '+¥0', {
-            fontSize: '18px', fontFamily: 'Microsoft YaHei', color: '#27ae60', fontStyle: 'bold'
+            fontSize: '18px', fontFamily: GameConfig.typography.fontFamily, color: '#27ae60', fontStyle: 'bold'
         }).setOrigin(0.5);
 
         // ── 文物修复工坊（Lv.4 解锁）──
         if (this.state.prestigeLevel >= 4) {
-            const workshopBtn = this.add.text(panelX + 140, panelY + 140, '🔧 文物修复工坊', {
-                fontSize: '14px', fontFamily: 'Microsoft YaHei', color: '#7fb3d5',
-                backgroundColor: '#1a2d3d', padding: { x: 14, y: 6 }
-            }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-            workshopBtn.on('pointerdown', () => {
-                if (this.audio) this.audio.click();
-                this.cameras.main.fadeOut(300, 26, 15, 10);
-                this.time.delayedCall(300, () => this.scene.start('RepairWorkshopScene'));
-            });
-            this.addButtonEffects(workshopBtn);
-            this.workshopBtn = workshopBtn;
+            this.createRepairWorkshopBtn();
         }
 
         // 分隔线
@@ -479,45 +485,45 @@ class MainScene extends Phaser.Scene {
 
         // ── 零活打工区 ──
         this.add.text(panelX + 140, panelY + 195, '🔨 考古零活', {
-            fontSize: '14px', fontFamily: 'Microsoft YaHei', color: '#d4a574'
+            fontSize: '14px', fontFamily: GameConfig.typography.fontFamily, color: '#d4a574'
         }).setOrigin(0.5);
 
         // 清理探方
         this.laborCleanBtn = this.add.text(panelX + 140, panelY + 230, '🧹 清理探方', {
-            fontSize: '14px', fontFamily: 'Microsoft YaHei', color: '#8b7355',
+            fontSize: '14px', fontFamily: GameConfig.typography.fontFamily, color: '#8b7355',
             backgroundColor: '#3d2817', padding: { x: 14, y: 8 }
             }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         this.laborCleanBtn.on('pointerdown', () => { if (this.audio) this.audio.click(); this.doCleanJob(); });
         this.addButtonEffects(this.laborCleanBtn);
 
         this.laborCleanLabel = this.add.text(panelX + 140, panelY + 258, '¥300~500  |  就绪', {
-            fontSize: '11px', fontFamily: 'Microsoft YaHei', color: '#5a7a5a'
+            fontSize: '11px', fontFamily: GameConfig.typography.fontFamily, color: '#5a7a5a'
         }).setOrigin(0.5);
 
         // 修复陶片
         this.laborPotteryBtn = this.add.text(panelX + 140, panelY + 290, '🏺 修复陶片', {
-            fontSize: '14px', fontFamily: 'Microsoft YaHei', color: '#8b7355',
+            fontSize: '14px', fontFamily: GameConfig.typography.fontFamily, color: '#8b7355',
             backgroundColor: '#3d2817', padding: { x: 14, y: 8 }
             }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         this.laborPotteryBtn.on('pointerdown', () => { this.audio.click(); this.doPotteryJob(); });
         this.addButtonEffects(this.laborPotteryBtn);
 
         this.laborPotteryLabel = this.add.text(panelX + 140, panelY + 318, '¥800~1200  |  需要声望 Lv.1', {
-            fontSize: '11px', fontFamily: 'Microsoft YaHei', color: '#8b7355'
+            fontSize: '11px', fontFamily: GameConfig.typography.fontFamily, color: '#8b7355'
         }).setOrigin(0.5);
 
         // 转生区域
         this.add.text(panelX + 140, panelY + 360, '🔮 学术休假', {
-            fontSize: '14px', fontFamily: 'Microsoft YaHei', color: '#d4a574'
+            fontSize: '14px', fontFamily: GameConfig.typography.fontFamily, color: '#d4a574'
         }).setOrigin(0.5);
 
         this.jpGainText = this.add.text(panelX + 140, panelY + 390,
             `可获得: ${this.state.jackpotPointsThisRun} JP`, {
-                fontSize: '12px', fontFamily: 'Microsoft YaHei', color: '#9b59b6'
+                fontSize: '12px', fontFamily: GameConfig.typography.fontFamily, color: '#9b59b6'
             }).setOrigin(0.5);
 
         const prestigeBtn = this.add.text(panelX + 140, panelY + 425, '开始转生', {
-            fontSize: '16px', fontFamily: 'Microsoft YaHei', color: '#f5e6d3',
+            fontSize: '16px', fontFamily: GameConfig.typography.fontFamily, color: '#f5e6d3',
             backgroundColor: '#5a3d7a', padding: { x: 20, y: 10 }
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         prestigeBtn.on('pointerdown', () => { if (this.audio) this.audio.click(); this.doPrestige(); });
@@ -529,7 +535,7 @@ class MainScene extends Phaser.Scene {
         this.prestigeBtn = prestigeBtn;
 
         const skillBtn = this.add.text(panelX + 140, panelY + 470, '⭐ 声望技能树', {
-            fontSize: '14px', fontFamily: 'Microsoft YaHei', color: '#8b7355'
+            fontSize: '14px', fontFamily: GameConfig.typography.fontFamily, color: '#8b7355'
         }).setOrigin(0.5).setInteractive({ useHandCursor: true })
             .on('pointerdown', () => {
                 if (this.audio) this.audio.click();
@@ -549,7 +555,7 @@ class MainScene extends Phaser.Scene {
 
         this.bottomText = this.add.text(this.config.width / 2, barY + 25,
             '💡 选择一个发掘层位开始考古之旅', {
-                fontSize: '14px', fontFamily: 'Microsoft YaHei', color: '#8b7355'
+                fontSize: '14px', fontFamily: GameConfig.typography.fontFamily, color: '#8b7355'
             }).setOrigin(0.5);
     }
 
@@ -615,7 +621,7 @@ class MainScene extends Phaser.Scene {
 
         this.cleanHintText = this.add.text(ex.x + ex.width / 2, ex.y + ex.height / 2,
             '🧹 拖动鼠标擦除泥土', {
-                fontSize: '16px', fontFamily: 'Microsoft YaHei',
+                fontSize: '16px', fontFamily: GameConfig.typography.fontFamily,
                 color: '#d4a574', fontStyle: 'bold'
             }).setOrigin(0.5).setAlpha(0.7).setDepth(30);
 
@@ -773,11 +779,11 @@ class MainScene extends Phaser.Scene {
 
         // 提示文字
         this.potteryBaseText = this.add.text(cx, cy + 120, '🏺 点击裂缝进行修复', {
-            fontSize: '15px', fontFamily: 'Microsoft YaHei', color: '#d4a574'
+            fontSize: '15px', fontFamily: GameConfig.typography.fontFamily, color: '#d4a574'
         }).setOrigin(0.5).setDepth(30);
 
         this.potteryPctText = this.add.text(cx, cy - 120, '已修复: 0/6', {
-            fontSize: '20px', fontFamily: 'Microsoft YaHei', color: '#8b7355', fontStyle: 'bold'
+            fontSize: '20px', fontFamily: GameConfig.typography.fontFamily, color: '#8b7355', fontStyle: 'bold'
         }).setOrigin(0.5).setDepth(30);
 
         // 生成裂缝
@@ -1008,7 +1014,7 @@ class MainScene extends Phaser.Scene {
             g.fillRect(ex.x + ex.width + 2, y - 0.5, 9, 1);
             if (i < 5) {
                 const label = this.add.text(ex.x + ex.width + 20, y + layerH/2, `${(i+1)*30}cm`, {
-                    fontSize: '10px', fontFamily: 'Microsoft YaHei', color: '#8b7355'
+                    fontSize: '10px', fontFamily: GameConfig.typography.fontFamily, color: '#8b7355'
                 }).setOrigin(0, 0.5).setDepth(5);
                 if (!this.depthLabels) this.depthLabels = [];
                 this.depthLabels.push(label);
@@ -1030,9 +1036,9 @@ class MainScene extends Phaser.Scene {
         if (this.siteSeparator) {
             this.siteSeparator.clear();
             this.siteSeparator.lineStyle(1, 0xd4a574, 0.25);
-            this.siteSeparator.lineBetween(ex.x, ex.y + ex.height + 18, ex.x + ex.width, ex.y + ex.height + 18);
+            this.siteSeparator.lineBetween(ex.x, ex.y + ex.height + 48, ex.x + ex.width, ex.y + ex.height + 48);
         }
-        const siteY = ex.y + ex.height + 40;
+        const siteY = ex.y + ex.height + 76;
         this.createSiteButtons(siteY);
     }
 
@@ -1139,7 +1145,7 @@ class MainScene extends Phaser.Scene {
                 this.config.excavation.x + this.config.excavation.width / 2,
                 this.config.excavation.y + this.config.excavation.height / 2,
                 '🔬 扫描中...', {
-                    fontSize: '24px', fontFamily: 'Microsoft YaHei',
+                    fontSize: '24px', fontFamily: GameConfig.typography.fontFamily,
                     color: '#00ffcc', fontStyle: 'bold'
                 }
             ).setOrigin(0.5).setDepth(30);
@@ -1205,7 +1211,7 @@ class MainScene extends Phaser.Scene {
         if (this.currentArtifact) {
             this.artifactLabel = this.add.text(ex.x + ex.width/2, ex.y + ex.height + 35,
                 '? ? ?', {
-                    fontSize: '18px', fontFamily: 'Microsoft YaHei',
+                    fontSize: '18px', fontFamily: GameConfig.typography.fontFamily,
                     color: '#d4a574', fontStyle: 'bold'
                 }
             ).setOrigin(0.5).setAlpha(0).setDepth(15);
@@ -1378,7 +1384,7 @@ class MainScene extends Phaser.Scene {
         // 显示进入新地层提示
         const label = this.add.text(ex.x + ex.width / 2, ex.y + ex.height / 2,
             `▼ ${nextLayer.name} ▼\n${nextLayer.desc}`, {
-                fontSize: '18px', fontFamily: 'Microsoft YaHei',
+                fontSize: '18px', fontFamily: GameConfig.typography.fontFamily,
                 color: '#f4d03f', fontStyle: 'bold',
                 align: 'center', stroke: '#000000', strokeThickness: 3
             }).setOrigin(0.5).setDepth(40).setAlpha(0);
@@ -1580,7 +1586,7 @@ class MainScene extends Phaser.Scene {
 
         const toast = this.add.text(fx, fy,
             `${find.icon} 发现${find.name}！+¥${find.value}`, {
-                fontSize: '16px', fontFamily: 'Microsoft YaHei',
+                fontSize: '16px', fontFamily: GameConfig.typography.fontFamily,
                 color: '#f4d03f', fontStyle: 'bold',
                 shadow: { offsetX: 1, offsetY: 1, color: '#000000', blur: 6, fill: true }
             }).setOrigin(0.5).setDepth(30);
@@ -1797,7 +1803,7 @@ class MainScene extends Phaser.Scene {
         modal.add(panel);
 
         modal.add(this.add.text(this.config.width / 2, py + 40, resultTitle, {
-            fontSize: '28px', fontFamily: 'Microsoft YaHei', color: titleColor, fontStyle: 'bold'
+            fontSize: '28px', fontFamily: GameConfig.typography.fontFamily, color: titleColor, fontStyle: 'bold'
         }).setOrigin(0.5));
 
         // 文物图标 — 有图标时后续元素整体下移 70px
@@ -1811,20 +1817,20 @@ class MainScene extends Phaser.Scene {
         }
 
         modal.add(this.add.text(this.config.width / 2, py + 85 + shift, result.artifact.name, {
-            fontSize: '22px', fontFamily: 'Microsoft YaHei', color: '#f5e6d3'
+            fontSize: '22px', fontFamily: GameConfig.typography.fontFamily, color: '#f5e6d3'
         }).setOrigin(0.5));
 
         const rarityData = ArtifactData.rarity[result.artifact.rarity];
         modal.add(this.add.text(this.config.width / 2, py + 120 + shift,
             `[${rarityData.name}] ×${rarityData.multiplier}`, {
-                fontSize: '16px', fontFamily: 'Microsoft YaHei', color: rarityData.color
+                fontSize: '16px', fontFamily: GameConfig.typography.fontFamily, color: rarityData.color
             }).setOrigin(0.5));
 
         if (isAuthentic) {
             const condData = ArtifactData.condition[condition];
             modal.add(this.add.text(this.config.width / 2, py + 150 + shift,
                 `品相: ${condData.name} (×${condData.valueMult})`, {
-                    fontSize: '14px', fontFamily: 'Microsoft YaHei', color: '#8b7355'
+                    fontSize: '14px', fontFamily: GameConfig.typography.fontFamily, color: '#8b7355'
                 }).setOrigin(0.5));
         }
 
@@ -1833,21 +1839,21 @@ class MainScene extends Phaser.Scene {
             modal.add(this.add.text(this.config.width / 2, py + 200 + shift,
                 `${valLabel}: ¥${result.value.toString()}`, {
                     fontSize: isAuthentic ? '26px' : '18px',
-                    fontFamily: 'Microsoft YaHei',
+                    fontFamily: GameConfig.typography.fontFamily,
                     color: isAuthentic ? '#f4d03f' : '#8b7355',
                     fontStyle: isAuthentic ? 'bold' : 'normal'
                 }).setOrigin(0.5));
         }
 
         modal.add(this.add.text(this.config.width / 2, py + 250 + shift, result.artifact.description, {
-            fontSize: '13px', fontFamily: 'Microsoft YaHei', color: '#a08060',
+            fontSize: '13px', fontFamily: GameConfig.typography.fontFamily, color: '#a08060',
             align: 'center', wordWrap: { width: pw - 60 }
         }).setOrigin(0.5));
 
         if (result.artifact.funFact) {
             modal.add(this.add.text(this.config.width / 2, py + 285 + shift,
                 `💬 ${result.artifact.funFact}`, {
-                    fontSize: '12px', fontFamily: 'Microsoft YaHei', color: '#8b7355',
+                    fontSize: '12px', fontFamily: GameConfig.typography.fontFamily, color: '#8b7355',
                     fontStyle: 'italic', align: 'center', wordWrap: { width: pw - 60 }
                 }).setOrigin(0.5));
         }
@@ -1855,14 +1861,14 @@ class MainScene extends Phaser.Scene {
         // ── 按钮 ──
         if (result.type === 'national_treasure') {
             modal.add(this.add.text(this.config.width / 2, py + 325 + shift, '🏛️ 国宝级文物，请做抉择:', {
-                fontSize: '14px', fontFamily: 'Microsoft YaHei', color: '#d4a574'
+                fontSize: '14px', fontFamily: GameConfig.typography.fontFamily, color: '#d4a574'
             }).setOrigin(0.5));
 
             const btnY = py + 365 + shift;
 
             const handOverBtn = this.add.text(this.config.width / 2 - 110, btnY,
                 `上交国家 (+${result.artifact.handOverReward || 400}JP)`, {
-                    fontSize: '16px', fontFamily: 'Microsoft YaHei', color: '#f5e6d3',
+                    fontSize: '16px', fontFamily: GameConfig.typography.fontFamily, color: '#f5e6d3',
                     backgroundColor: '#27ae60', padding: { x: 18, y: 10 }
                 }).setOrigin(0.5).setInteractive({ useHandCursor: true });
             this.addButtonEffects(handOverBtn);
@@ -1878,10 +1884,9 @@ class MainScene extends Phaser.Scene {
 
             const keepBtn = this.add.text(this.config.width / 2 + 110, btnY,
                 '私人收藏 (5×拍卖)', {
-                    fontSize: '16px', fontFamily: 'Microsoft YaHei', color: '#f5e6d3',
+                    fontSize: '16px', fontFamily: GameConfig.typography.fontFamily, color: '#f5e6d3',
                     backgroundColor: '#8b7355', padding: { x: 18, y: 10 }
                 }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-            this.addButtonEffects(keepBtn);
             this.addButtonEffects(keepBtn);
 
             keepBtn.on('pointerdown', () => {
@@ -1897,7 +1902,7 @@ class MainScene extends Phaser.Scene {
             modal.add(keepBtn);
         } else {
             const continueBtn = this.add.text(this.config.width / 2, py + 390 + shift, '继续游戏 →', {
-                fontSize: '18px', fontFamily: 'Microsoft YaHei', color: '#f5e6d3',
+                fontSize: '18px', fontFamily: GameConfig.typography.fontFamily, color: '#f5e6d3',
                 backgroundColor: '#3d2817', padding: { x: 25, y: 10 }
             }).setOrigin(0.5).setInteractive({ useHandCursor: true });
             this.addButtonEffects(continueBtn);
@@ -1965,7 +1970,7 @@ class MainScene extends Phaser.Scene {
 
     showToastPopup(text) {
         const toast = this.add.text(this.config.width / 2, this.config.height / 2, text, {
-            fontSize: '20px', fontFamily: 'Microsoft YaHei',
+            fontSize: '20px', fontFamily: GameConfig.typography.fontFamily,
             color: '#f5e6d3', backgroundColor: '#2c1810',
             padding: { x: 25, y: 12 }
         }).setOrigin(0.5).setDepth(200);
@@ -2005,17 +2010,42 @@ class MainScene extends Phaser.Scene {
 
     doPrestige() {
         if (this.state.jackpotPointsThisRun < 5) {
-            this.showMessage('本局基金点不足5点，无法转生', 'error');
+            this.showMessage('本局基金点不足5点，无法操作', 'error');
             return;
         }
 
-        const result = this.prestigeManager.doPrestige();
-        if (result.success) {
-            if (this.audio) this.audio.prestige();
-            this.showPrestigeResult(result);
-            this.saveManager.savePermanent();
-            this.updateUI();
-            this.showMessage(result.message, 'success');
+        const level = this.prestigeManager.calculatePrestigeLevel();
+        if (level >= 5) {
+            // Lv.5 学术休假（转生）
+            const result = this.prestigeManager.doPrestige();
+            if (result.success) {
+                if (this.audio) this.audio.prestige();
+                this.showPrestigeResult(result);
+                this.saveManager.savePermanent();
+                this.refreshSiteButtons();
+                this.drawSoilPreview();
+                this.updateUI();
+                this.showMessage(result.message, 'success');
+            }
+        } else {
+            // Lv.0~4 提升声望等级
+            const result = this.prestigeManager.doAdvance();
+            if (result.success) {
+                if (this.audio) this.audio.prestige();
+                if (result.leveledUp) {
+                    this.showPrestigeResult(result);
+                    // 晋升后检查是否需要新建依赖声望等级的功能
+                    if (this.state.prestigeLevel >= 3 && !this.techArchaeologyLabel) {
+                        this.createTechArchaeologyToggle(this.config.excavation);
+                    }
+                    if (this.state.prestigeLevel >= 4 && !this.workshopBtn) {
+                        this.createRepairWorkshopBtn();
+                    }
+                }
+                this.updateEraButtons();
+                this.updateUI();
+                this.showMessage(result.message, 'success');
+            }
         }
     }
 
@@ -2027,32 +2057,46 @@ class MainScene extends Phaser.Scene {
         overlay.fillRect(0, 0, this.config.width, this.config.height);
         modal.add(overlay);
 
+        const isRebirth = result.reward && typeof result.reward.name === 'string';
+        const panelH = isRebirth ? 300 : 220 + (result.reward && result.reward.unlocks ? result.reward.unlocks.length * 26 : 0);
+
         const panel = this.add.graphics();
         panel.fillStyle(0x2c1810, 1);
-        panel.fillRoundedRect(0, 0, 400, 300, 20);
+        panel.fillRoundedRect(0, 0, 400, panelH, 20);
         panel.lineStyle(3, 0xf4d03f, 1);
-        panel.strokeRoundedRect(0, 0, 400, 300, 20);
+        panel.strokeRoundedRect(0, 0, 400, panelH, 20);
         modal.add(panel);
 
-        modal.add(this.add.text(200, 50, '🎉 学术休假完成!', {
-            fontSize: '28px', fontFamily: 'Microsoft YaHei', color: '#f4d03f', fontStyle: 'bold'
+        const title = isRebirth ? '🎉 学术休假完成!' : '⭐ 声望提升！';
+        modal.add(this.add.text(200, 50, title, {
+            fontSize: '28px', fontFamily: GameConfig.typography.fontFamily, color: '#f4d03f', fontStyle: 'bold'
         }).setOrigin(0.5));
 
         modal.add(this.add.text(200, 110, `获得 ${result.points} 基金点`, {
-            fontSize: '20px', fontFamily: 'Microsoft YaHei', color: '#9b59b6'
+            fontSize: '20px', fontFamily: GameConfig.typography.fontFamily, color: '#9b59b6'
         }).setOrigin(0.5));
 
         if (result.reward) {
-            modal.add(this.add.text(200, 160, `永久奖励: ${result.reward.name}`, {
-                fontSize: '18px', fontFamily: 'Microsoft YaHei', color: '#d4a574'
-            }).setOrigin(0.5));
-            modal.add(this.add.text(200, 190, result.reward.effect, {
-                fontSize: '14px', fontFamily: 'Microsoft YaHei', color: '#8b7355'
-            }).setOrigin(0.5));
+            if (isRebirth) {
+                modal.add(this.add.text(200, 160, `永久奖励: ${result.reward.name}`, {
+                    fontSize: '18px', fontFamily: GameConfig.typography.fontFamily, color: '#d4a574'
+                }).setOrigin(0.5));
+                modal.add(this.add.text(200, 190, result.reward.effect, {
+                    fontSize: '14px', fontFamily: GameConfig.typography.fontFamily, color: '#8b7355'
+                }).setOrigin(0.5));
+            } else if (result.reward.unlocks) {
+                const unlockY = 160;
+                result.reward.unlocks.forEach((u, i) => {
+                    modal.add(this.add.text(200, unlockY + i * 26, u, {
+                        fontSize: '16px', fontFamily: GameConfig.typography.fontFamily, color: '#d4a574'
+                    }).setOrigin(0.5));
+                });
+            }
         }
 
-        const continueBtn = this.add.text(200, 250, '继续游戏', {
-            fontSize: '16px', fontFamily: 'Microsoft YaHei', color: '#f5e6d3',
+        const btnY = panelH - 50;
+        const continueBtn = this.add.text(200, btnY, '继续游戏', {
+            fontSize: '16px', fontFamily: GameConfig.typography.fontFamily, color: '#f5e6d3',
             backgroundColor: '#3d2817', padding: { x: 30, y: 10 }
         }).setOrigin(0.5).setInteractive({ useHandCursor: true });
         this.addButtonEffects(continueBtn);
@@ -2121,7 +2165,7 @@ class MainScene extends Phaser.Scene {
 
     showToast(text, tx, ty) {
         const toast = this.add.text(tx || this.config.width / 2, ty || 60, text, {
-            fontSize: '18px', fontFamily: 'Microsoft YaHei', color: '#f5e6d3',
+            fontSize: '18px', fontFamily: GameConfig.typography.fontFamily, color: '#f5e6d3',
             backgroundColor: '#2c1810', padding: { x: 15, y: 8 },
             shadow: { offsetX: 1, offsetY: 1, color: '#000000', blur: 6, fill: true }
         }).setOrigin(0.5).setDepth(50);
@@ -2161,11 +2205,11 @@ class MainScene extends Phaser.Scene {
         const dividerY = panelY + 55 + 5 * 38 + 10;
         const upgradeTitleY = dividerY + 20;
         const upgrades = [
-            { id: 'luck', name: '勘探运气', icon: 'icon_prestige' },
+            { id: 'luck', name: '勘探运气', icon: 'icon_luck' },
             { id: 'brushSize', name: '挖掘范围', icon: 'icon_brush' },
-            { id: 'excavationSpeed', name: '挖掘速度', icon: 'icon_excavate' },
-            { id: 'artifactValue', name: '文物倍率', icon: 'icon_money' },
-            { id: 'appraisalAccuracy', name: '鉴定精度', icon: 'icon_authentic' }
+            { id: 'excavationSpeed', name: '挖掘速度', icon: 'icon_speed' },
+            { id: 'artifactValue', name: '文物倍率', icon: 'icon_multiplier' },
+            { id: 'appraisalAccuracy', name: '鉴定精度', icon: 'icon_accuracy' }
         ];
 
         this.upgradeButtons.forEach(({ btn }) => btn.destroy());
@@ -2230,7 +2274,7 @@ class MainScene extends Phaser.Scene {
         const display = style.icon + text;
 
         const toast = this.add.text(this.config.width / 2, 60, display, {
-            fontSize: '18px', fontFamily: 'Microsoft YaHei', color: '#f5e6d3',
+            fontSize: '18px', fontFamily: GameConfig.typography.fontFamily, color: '#f5e6d3',
             backgroundColor: '#' + style.bg.toString(16).padStart(6, '0'),
             padding: { x: 20, y: 12 },
             stroke: '#' + style.border.toString(16).padStart(6, '0'),

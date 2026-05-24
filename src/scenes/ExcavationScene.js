@@ -266,10 +266,9 @@ class ExcavationScene extends Phaser.Scene {
                 this.artifactLabel.setText(this.currentArtifact.name);
                 this.artifactLabel.setAlpha((alpha - 0.80) / 0.20);
             }
-            // 显示文物图标 (优先个体纹理→类型纹理)
+            // 显示文物图标 (优先个体纹理)
             if (alpha >= 0.70 && !this.artifactIcon) {
                 const iconKey = this.getArtifactIconKey(this.currentArtifact);
-                console.log('[drawArtifactOutline] alpha=' + alpha.toFixed(2) + ' iconKey=' + iconKey);
                 if (iconKey) {
                     try {
                         this.artifactIcon = this.add.image(cx, cy - 10, iconKey)
@@ -281,7 +280,6 @@ class ExcavationScene extends Phaser.Scene {
                             alpha: 1,
                             duration: 300
                         });
-                        console.log('[drawArtifactOutline] 图标已添加到场景 x=' + cx + ' y=' + (cy-10) + ' alpha=0->1');
                     } catch (e) {
                         console.error('[drawArtifactOutline] 添加图标失败:', e);
                     }
@@ -766,16 +764,14 @@ class ExcavationScene extends Phaser.Scene {
             color: titleColor, fontStyle: 'bold'
         }).setOrigin(0.5));
 
-        // 文物图标 (优先个体纹理→类型纹理)
+        // 文物图标
         const iconKey = this.getArtifactIconKey(result.artifact);
-        console.log('[showAppraisalResult] iconKey=' + iconKey + ' artifact=' + (result.artifact ? result.artifact.id : 'null') + ' type=' + (result.artifact ? result.artifact.type : 'null'));
         let nameY = py + 85;
         if (iconKey) {
             try {
                 const img = this.add.image(this.config.width / 2, py + 75, iconKey).setDisplaySize(60, 60).setDepth(101);
                 modal.add(img);
                 nameY = py + 120;
-                console.log('[showAppraisalResult] 图标已添加到弹窗');
             } catch (e) {
                 console.error('[showAppraisalResult] 添加图标失败:', e);
             }
@@ -938,18 +934,9 @@ class ExcavationScene extends Phaser.Scene {
      * 获取文物图标的纹理 key，优先级：个体纹理 → 类型纹理 → null
      */
     getArtifactIconKey(artifact) {
-        if (!artifact) { console.warn('[ExcavationScene] getArtifactIconKey: artifact is null'); return null; }
+        if (!artifact) return null;
         const idKey = 'artifact_' + artifact.id;
-        const existsId = this.textures.exists(idKey);
-        console.log('[ExcavationScene] getArtifactIconKey:', {
-            id: artifact.id, type: artifact.type,
-            idKey, existsId
-        });
-        if (existsId) return idKey;
-        // 最后一次机会：枚举纹理管理器所有 key，找出匹配的
-        const allKeys = this.textures.getTextureKeys();
-        const anyMatch = allKeys.filter(k => k.includes('artifact'));
-        console.warn('[ExcavationScene] 未找到图标纹理！文物:', artifact.id, 'type:', artifact.type, '所有文物相关纹理:', anyMatch);
+        if (this.textures.exists(idKey)) return idKey;
         return null;
     }
 

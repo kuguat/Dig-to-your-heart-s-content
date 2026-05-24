@@ -7,9 +7,8 @@ Phaser 3 网页端文化考古模拟游戏。1200×800 画布，单 HTML + 16 �
 - 存储: `assets/artifacts/<id>.png` (256×256 PNG-24, 透明背景)
 - 加载: BootScene `preload()` 中 `this.load.image('artifact_<id>', 'assets/artifacts/<id>.png')`
 - 纹理 key 约定: `artifact_<artifactData中的id>`
-- 显示: MuseumScene 卡片/详情弹窗、ExcavationScene 挖掘揭示/结果弹窗
-- 回退: 无图标时用 `rarity_<rarity>` 程序纹理
-- 规范文档: `文物图标制作规范.md` (18 种类型，20 个文件)
+- 显示: MuseumScene 卡片/详情弹窗、ExcavationScene 挖掘揭示/结果弹窗、MainScene 内嵌发掘/鉴定弹窗
+- 规范文档: `文物图标制作规范.md` (20 种类型，81 个 PNG：61 件文物个体图标 + 20 类型通用图标)
 
 ## 场景流转
 BootScene → MainScene ⇄ ExcavationScene / MuseumScene / PrestigeScene / RepairWorkshopScene
