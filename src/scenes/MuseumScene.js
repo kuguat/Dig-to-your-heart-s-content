@@ -336,14 +336,29 @@ class MuseumScene extends Phaser.Scene {
                     color: '#8b7355'
                 }).setOrigin(0.5).setDepth(20);
 
+            let loaded = 0;
+            const total = missingIcons.length;
             missingIcons.forEach(({ key, id }) => {
-                this.load.image(key, 'assets/artifacts/' + id + '.png');
+                const img = new Image();
+                img.onload = () => {
+                    if (!this.textures.exists(key)) {
+                        this.textures.addImage(key, img);
+                    }
+                    loaded++;
+                    if (loaded >= total) {
+                        if (this.loadText && this.loadText.active) this.loadText.destroy();
+                        renderPage();
+                    }
+                };
+                img.onerror = () => {
+                    loaded++;
+                    if (loaded >= total) {
+                        if (this.loadText && this.loadText.active) this.loadText.destroy();
+                        renderPage();
+                    }
+                };
+                img.src = 'assets/artifacts/' + id + '.png';
             });
-            this.load.once('complete', () => {
-                if (this.loadText && this.loadText.active) this.loadText.destroy();
-                renderPage();
-            });
-            this.load.start();
         } else {
             renderPage();
         }

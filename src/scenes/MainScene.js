@@ -2366,12 +2366,19 @@ class MainScene extends Phaser.Scene {
     _preloadArtifactIcon(artifact) {
         if (!artifact) return;
         const idKey = 'artifact_' + artifact.id;
-        if (this.textures.exists(idKey)) return;
+        const typeKey = 'artifact_' + artifact.type;
         if (!this._loadingIcons) this._loadingIcons = new Set();
-        if (this._loadingIcons.has(artifact.id)) return;
-        this._loadingIcons.add(artifact.id);
-        this.load.image(idKey, 'assets/artifacts/' + artifact.id + '.png');
-        this.load.start();
+        // 使用原生 Image 加载，避免 Phaser scene loader 在 create() 阶段的状态冲突
+        const tryLoad = (key, filename) => {
+            if (this.textures.exists(key) || this._loadingIcons.has(filename)) return;
+            this._loadingIcons.add(filename);
+            const img = new Image();
+            img.onload = () => { this.textures.addImage(key, img); };
+            img.onerror = () => { console.warn('[MainScene] 文物图标加载失败:', filename); };
+            img.src = 'assets/artifacts/' + filename + '.png';
+        };
+        tryLoad(idKey, artifact.id);
+        tryLoad(typeKey, artifact.type);
     }
 
     /**
@@ -2381,6 +2388,12 @@ class MainScene extends Phaser.Scene {
         if (!artifact) return null;
         const idKey = 'artifact_' + artifact.id;
         if (this.textures.exists(idKey)) return idKey;
+        const typeKey = 'artifact_' + artifact.type;
+        if (this.textures.exists(typeKey)) return typeKey;
+        // 还没加载过则再尝试一次
+        if (!this._loadingIcons || !this._loadingIcons.has(artifact.id)) {
+            this._preloadArtifactIcon(artifact);
+        }
         return null;
     }
 }
