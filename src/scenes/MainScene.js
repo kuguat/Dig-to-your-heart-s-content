@@ -1788,7 +1788,7 @@ class MainScene extends Phaser.Scene {
         if (isAuthentic) {
             if (result.type === 'national_treasure') {
                 borderColor = 0xf4d03f;
-                resultTitle = '🎊 国宝级文物！';
+                resultTitle = result.rarityLabel ? `🎊 ${result.rarityLabel}！` : '🎊 国宝级文物！';
                 titleColor = '#f4d03f';
             } else {
                 borderColor = 0x27ae60;
@@ -1863,37 +1863,40 @@ class MainScene extends Phaser.Scene {
 
         // ── 按钮 ──
         if (result.type === 'national_treasure') {
-            modal.add(this.add.text(this.config.width / 2, py + 325 + shift, '🏛️ 国宝级文物，请做抉择:', {
+            const jp = result.jpReward || 400;
+            const sellMult = result.sellMultiplier || 5;
+            const label = result.rarityLabel || '国宝级文物';
+
+            modal.add(this.add.text(this.config.width / 2, py + 325 + shift, `${label}，请做抉择:`, {
                 fontSize: '14px', fontFamily: GameConfig.typography.fontFamily, color: '#d4a574'
             }).setOrigin(0.5));
 
             const btnY = py + 365 + shift;
 
             const handOverBtn = this.add.text(this.config.width / 2 - 110, btnY,
-                `上交国家 (+${result.artifact.handOverReward || 400}JP)`, {
+                `上交国家 (+${jp}JP)`, {
                     fontSize: '16px', fontFamily: GameConfig.typography.fontFamily, color: '#f5e6d3',
                     backgroundColor: '#27ae60', padding: { x: 18, y: 10 }
                 }).setOrigin(0.5).setInteractive({ useHandCursor: true });
             this.addButtonEffects(handOverBtn);
 
             handOverBtn.on('pointerdown', () => {
-                const jpReward = result.artifact.handOverReward || 400;
-                this.economy.addPrestigePoints(jpReward);
-                this.showToastPopup(`感谢奉献！获得 ${jpReward} 基金点`);
+                this.economy.addPrestigePoints(jp);
+                this.showToastPopup(`感谢奉献！获得 ${jp} 基金点`);
                 this.state.save();
                 modal.destroy();
                 this.time.delayedCall(1200, () => this.cleanupExcavation());
             });
 
             const keepBtn = this.add.text(this.config.width / 2 + 110, btnY,
-                '私人收藏 (5×拍卖)', {
+                `私人收藏 (${sellMult}×拍卖)`, {
                     fontSize: '16px', fontFamily: GameConfig.typography.fontFamily, color: '#f5e6d3',
                     backgroundColor: '#8b7355', padding: { x: 18, y: 10 }
                 }).setOrigin(0.5).setInteractive({ useHandCursor: true });
             this.addButtonEffects(keepBtn);
 
             keepBtn.on('pointerdown', () => {
-                const bonus = result.value.multiply(5);
+                const bonus = result.value.multiply(sellMult);
                 this.economy.addFunds(bonus);
                 this.showToastPopup(`拍卖成功！额外获得 ¥${bonus.toString()}`);
                 this.state.save();
