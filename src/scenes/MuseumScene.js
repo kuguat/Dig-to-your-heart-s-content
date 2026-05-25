@@ -283,39 +283,70 @@ class MuseumScene extends Phaser.Scene {
         const endIdx = Math.min(startIdx + itemsPerPage, list.length);
         const pageItems = list.slice(startIdx, endIdx);
 
-        // 布局：有收藏家面板时 3列 × 3行(9件/页)，否则 4列 × 3行(12件/页)
-        const cols = hasPanel ? 3 : 4;
-        const startX = hasPanel ? 310 : 100;
-        const startY = 125;
-        const itemWidth = 250;
-        const itemHeight = 160;
-        const gapX = 20;
-        const gapY = 20;
-
-        pageItems.forEach((artifact, idx) => {
-            const col = idx % cols;
-            const row = Math.floor(idx / cols);
-            const x = startX + col * (itemWidth + gapX);
-            const y = startY + row * (itemHeight + gapY);
-
-            const container = this.createArtifactCard(x, y, artifact);
-            this.itemContainers.push(container);
+        // 收集需要加载的文物图标
+        const missingIcons = [];
+        pageItems.forEach(a => {
+            const key = 'artifact_' + a.id;
+            if (!this.textures.exists(key)) {
+                missingIcons.push({ key, id: a.id });
+            }
         });
 
-        // 更新页码
-        const totalPages = Math.ceil(list.length / itemsPerPage);
-        if (totalPages > 0) {
-            const filterLabel = this.currentRarityFilter !== 'all'
-                ? ` (${list.length}件)`
-                : '';
-            this.pageText.setText(`第 ${page + 1} / ${totalPages} 页${filterLabel}`);
-        } else {
-            this.pageText.setText('暂无该等级文物');
-        }
+        const renderPage = () => {
+            // 布局：有收藏家面板时 3列 × 3行(9件/页)，否则 4列 × 3行(12件/页)
+            const cols = hasPanel ? 3 : 4;
+            const startX = hasPanel ? 310 : 100;
+            const startY = 125;
+            const itemWidth = 250;
+            const itemHeight = 160;
+            const gapX = 20;
+            const gapY = 20;
 
-        // 更新按钮状态
-        this.prevBtn.setAlpha(page > 0 ? 1 : 0.5);
-        this.nextBtn.setAlpha(page < totalPages - 1 ? 1 : 0.5);
+            pageItems.forEach((artifact, idx) => {
+                const col = idx % cols;
+                const row = Math.floor(idx / cols);
+                const x = startX + col * (itemWidth + gapX);
+                const y = startY + row * (itemHeight + gapY);
+
+                const container = this.createArtifactCard(x, y, artifact);
+                this.itemContainers.push(container);
+            });
+
+            // 更新页码
+            const totalPages = Math.ceil(list.length / itemsPerPage);
+            if (totalPages > 0) {
+                const filterLabel = this.currentRarityFilter !== 'all'
+                    ? ` (${list.length}件)`
+                    : '';
+                this.pageText.setText(`第 ${page + 1} / ${totalPages} 页${filterLabel}`);
+            } else {
+                this.pageText.setText('暂无该等级文物');
+            }
+
+            // 更新按钮状态
+            this.prevBtn.setAlpha(page > 0 ? 1 : 0.5);
+            this.nextBtn.setAlpha(page < totalPages - 1 ? 1 : 0.5);
+        };
+
+        if (missingIcons.length > 0) {
+            // 按需加载缺失的图标，加载完再渲染
+            this.loadText = this.add.text(this.config.width / 2, this.config.height / 2,
+                '加载文物图标...', {
+                    fontSize: '17px', fontFamily: GameConfig.typography.fontFamily,
+                    color: '#8b7355'
+                }).setOrigin(0.5).setDepth(20);
+
+            missingIcons.forEach(({ key, id }) => {
+                this.load.image(key, 'assets/artifacts/' + id + '.png');
+            });
+            this.load.once('complete', () => {
+                if (this.loadText && this.loadText.active) this.loadText.destroy();
+                renderPage();
+            });
+            this.load.start();
+        } else {
+            renderPage();
+        }
     }
 
     createArtifactCard(x, y, artifact) {
@@ -696,9 +727,10 @@ class MuseumScene extends Phaser.Scene {
      * 获取文物图标的纹理 key，优先级：个体纹理 → 类型纹理 → null
      */
     getArtifactIconKey(artifact) {
+        if (!artifact) return null;
         const idKey = 'artifact_' + artifact.id;
         if (this.textures.exists(idKey)) return idKey;
-        return null;
+        return null; // displayPage 已预加载当前页图标，这里只做检查
     }
 
     get config() {

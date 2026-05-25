@@ -30,18 +30,16 @@ class BootScene extends Phaser.Scene {
             console.warn('BootScene: 加载失败 - ' + file.key + ' (' + file.url + ')');
         });
 
-        // 加载全部61件文物专属PNG图标
+        // 不预加载文物PNG（总计127MB），改为各场景按需加载
         this._artifactIds = [];
         for (const era of ['neolithic','shangzhou','qinhan','tang','songyuan','mingqing']) {
             if (window.ArtifactData && window.ArtifactData[era]) {
                 for (const a of window.ArtifactData[era]) {
-                    const key = 'artifact_' + a.id;
-                    this._artifactIds.push(key);
-                    this.load.image(key, 'assets/artifacts/' + a.id + '.png');
+                    this._artifactIds.push('artifact_' + a.id);
                 }
             }
         }
-        console.log('BootScene: 预加载 ' + this._artifactIds.length + ' 件文物PNG');
+        console.log('BootScene: 文物图标将按需加载（共 ' + this._artifactIds.length + ' 件）');
     }
 
     create() {

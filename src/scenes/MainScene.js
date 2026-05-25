@@ -2364,6 +2364,13 @@ class MainScene extends Phaser.Scene {
         if (!artifact) return null;
         const idKey = 'artifact_' + artifact.id;
         if (this.textures.exists(idKey)) return idKey;
+        // 后台按需加载
+        if (!this._loadingIcons) this._loadingIcons = new Set();
+        if (!this._loadingIcons.has(artifact.id)) {
+            this._loadingIcons.add(artifact.id);
+            this.load.image(idKey, 'assets/artifacts/' + artifact.id + '.png');
+            this.load.start();
+        }
         return null;
     }
 }
