@@ -611,13 +611,24 @@ class MainScene extends Phaser.Scene {
         this.cleanLayers.forEach(l => { l.remaining = l.volume; });
         this.cleanCurLayer = 0;
 
-        this.cleanStrataGfx = [];
-        for (let i = 0; i < 3; i++) {
-            const g = this.add.graphics().setDepth(5 + 3 - i);
-            this.cleanStrataGfx.push(g);
-        }
+        // ── 隐藏正常的挖掘地层（strataGraphics 等在深度 5+）──
+        if (this.strataGraphics) this.strataGraphics.forEach(g => g.setVisible(false));
+        if (this.scrapeLayer) this.scrapeLayer.setVisible(false);
+        if (this.artifactOutline) this.artifactOutline.setVisible(false);
+
+        // ── 干净的基底（"考古层"被刷出后露出的表面）──
+        this.cleanBaseGfx = this.add.graphics().setDepth(4);
+        this.drawCleanBase();
+
+        // ── 泥土 RenderTexture（橡皮擦式局部擦除），深度 7 高于正常地层 ──
+        // 必须 setOrigin(0,0)：Phaser RT 默认 origin 为 (0.5,0.5)，不修正会严重偏移
+        this.cleanDirtRT = this.add.renderTexture(ex.x, ex.y, ex.width, ex.height).setOrigin(0, 0).setDepth(7);
+        // 橡皮擦：用 make.graphics 不加入显示列表，erase() 时直接以偏移定位
+        this.cleanEraserGfx = this.make.graphics({ add: false });
+        this.cleanEraserGfx.fillStyle(0xffffff, 1);
+        this.cleanEraserGfx.fillCircle(0, 0, 18);
+        this._drawCleanDirtTexture();
         this.cleanScrapeGfx = this.add.graphics().setDepth(10);
-        this.drawCleanStrata();
 
         this.cleanHintText = this.add.text(ex.x + ex.width / 2, ex.y + ex.height / 2,
             '🧹 拖动鼠标擦除泥土', {
@@ -626,40 +637,129 @@ class MainScene extends Phaser.Scene {
             }).setOrigin(0.5).setAlpha(0.7).setDepth(30);
 
         this.setupLaborInput();
-        this.showMessage('🧹 开始清理探方！拖动鼠标擦除泥土');
 
+        // ── 刷子光标（必须在 setupLaborInput 之后，避免被 off('pointermove') 清除）──
+        this.cleanBrushCursor = this.add.graphics().setDepth(35);
+        this._brushCursorHandler = (ptr) => {
+            if (!this.cleanBrushCursor) return;
+            this.cleanBrushCursor.clear();
+            const bx = ptr.x, by = ptr.y;
+            const inEx = bx >= ex.x && bx <= ex.x + ex.width && by >= ex.y && by <= ex.y + ex.height;
+            if (!inEx) { this.cleanBrushCursor.setVisible(false); return; }
+            this.cleanBrushCursor.setVisible(true);
+            // 刷头毛簇
+            const br = 16;
+            this.cleanBrushCursor.fillStyle(0x8B6914, 0.7);
+            this.cleanBrushCursor.fillCircle(bx, by, br);
+            this.cleanBrushCursor.fillStyle(0xA0783C, 0.5);
+            this.cleanBrushCursor.fillCircle(bx - 6, by - 2, br * 0.6);
+            this.cleanBrushCursor.fillCircle(bx + 5, by - 1, br * 0.55);
+            this.cleanBrushCursor.fillCircle(bx, by - 5, br * 0.5);
+            // 中心高光
+            this.cleanBrushCursor.fillStyle(0xC4A46A, 0.4);
+            this.cleanBrushCursor.fillCircle(bx, by - 3, br * 0.35);
+            // 刷毛纹理线
+            this.cleanBrushCursor.lineStyle(1, 0x6B4E1A, 0.25);
+            for (let li = -2; li <= 2; li++) {
+                this.cleanBrushCursor.lineBetween(bx + li * 5, by - br * 0.8, bx + li * 5, by + br * 0.5);
+            }
+        };
+        this.input.on('pointermove', this._brushCursorHandler);
+        this.showMessage('🧹 开始清理探方！拖动鼠标擦除泥土');
+        // ── 悬浮尘埃（浓密版）──
+        this._startFloatingDust(ex, true);
         this.cameras.main.flash(150, 30, 25, 10);
     }
 
-    drawCleanStrata() {
+    drawCleanBase() {
         const ex = this.config.excavation;
-        let yOff = ex.y;
+        if (!this.cleanBaseGfx) return;
+        this.cleanBaseGfx.clear();
+        // 干净的考古层面 — 深棕色，带细微纹理
+        this.cleanBaseGfx.fillStyle(0x3D2817, 0.9);
+        this.cleanBaseGfx.fillRect(ex.x, ex.y, ex.width, ex.height);
+        // 细纹理
+        const texCount = Math.floor(ex.width * ex.height / 80);
+        for (let j = 0; j < texCount; j++) {
+            const tx = ex.x + Math.random() * ex.width;
+            const ty = ex.y + Math.random() * ex.height;
+            this.cleanBaseGfx.fillStyle(0x4A3220, 0.3);
+            this.cleanBaseGfx.fillCircle(tx, ty, Math.random() * 2 + 0.5);
+        }
+    }
+
+    _drawCleanDirtTexture() {
+        // 用 offscreen Canvas 绘制泥土纹理，完全不经过 Phaser 显示列表
+        if (!this.cleanDirtRT) return;
+        this.cleanDirtRT.clear();
+        const ex = this.config.excavation;
         const lh = ex.height / 3;
 
+        const canvas = document.createElement('canvas');
+        canvas.width = ex.width;
+        canvas.height = ex.height;
+        const ctx = canvas.getContext('2d');
+
+        let yOff = 0;
         this.cleanLayers.forEach((layer, i) => {
-            const g = this.cleanStrataGfx[i];
-            if (!g) return;
-            g.clear();
+            // 主填充
+            ctx.fillStyle = '#' + layer.color.toString(16).padStart(6, '0');
+            ctx.globalAlpha = 0.9;
+            ctx.fillRect(0, yOff, ex.width, lh);
 
-            const remH = (layer.remaining / layer.volume) * lh;
-            const y = yOff + (lh - remH);
+            // 不规则土块纹理
+            const dotCount = Math.floor(ex.width * lh / 50);
+            for (let j = 0; j < dotCount; j++) {
+                const size = Math.random() * 4 + 1.5;
+                ctx.fillStyle = '#' + layer.darkColor.toString(16).padStart(6, '0');
+                ctx.globalAlpha = Math.random() * 0.35 + 0.1;
+                ctx.beginPath();
+                ctx.arc(Math.random() * ex.width, yOff + Math.random() * lh, size, 0, Math.PI * 2);
+                ctx.fill();
+            }
 
-            if (remH > 0) {
-                const t = layer.remaining / layer.volume;
-                g.fillStyle(layer.color, 0.6 + t * 0.4);
-                g.fillRect(ex.x, y, ex.width, remH);
+            // 小石块
+            const pebbleCount = Math.floor(ex.width * lh / 300);
+            for (let j = 0; j < pebbleCount; j++) {
+                const pr = Math.random() * 4 + 2;
+                ctx.fillStyle = '#6B5B4A';
+                ctx.globalAlpha = 0.5;
+                ctx.beginPath();
+                ctx.arc(Math.random() * ex.width, yOff + Math.random() * lh, pr, 0, Math.PI * 2);
+                ctx.fill();
+            }
 
-                // 纹理斑点
-                const dotCount = Math.floor(ex.width * remH / 60);
-                for (let j = 0; j < dotCount; j++) {
-                    const dx = ex.x + Math.random() * ex.width;
-                    const dy = y + Math.random() * remH;
-                    g.fillStyle(layer.darkColor, Math.random() * 0.3 + 0.1);
-                    g.fillCircle(dx, dy, Math.random() * 3.5 + 1.5);
+            // 硬土龟裂纹
+            if (layer.name === '硬土') {
+                ctx.strokeStyle = '#6B5B4A';
+                ctx.globalAlpha = 0.3;
+                ctx.lineWidth = 1;
+                const crackCount = Math.floor(ex.width / 40);
+                for (let j = 0; j < crackCount; j++) {
+                    const cx = Math.random() * ex.width;
+                    const cy = yOff + Math.random() * lh;
+                    const clen = 15 + Math.random() * 35;
+                    const cang = Math.random() * Math.PI * 2;
+                    ctx.beginPath();
+                    ctx.moveTo(cx, cy);
+                    ctx.lineTo(cx + Math.cos(cang) * clen, cy + Math.sin(cang) * clen);
+                    ctx.stroke();
                 }
             }
+            ctx.globalAlpha = 1;
             yOff += lh;
         });
+
+        // 将 Canvas 纹理贴到 RenderTexture 上
+        if (this.textures.exists('_cleanDirtCanvas')) {
+            this.textures.remove('_cleanDirtCanvas');
+        }
+        this.textures.addCanvas('_cleanDirtCanvas', canvas);
+        this.cleanDirtRT.draw('_cleanDirtCanvas', 0, 0);
+    }
+
+    drawCleanStrata() {
+        // 已被 _drawCleanDirtTexture + RenderTexture.erase 替代，保留占位
     }
 
     setupLaborInput() {
@@ -698,39 +798,241 @@ class MainScene extends Phaser.Scene {
         const layer = this.cleanLayers[this.cleanCurLayer];
         if (!layer || layer.remaining <= 0) return;
 
-        const power = 2.5;
+        const power = 3;
         const r = Math.min(power, layer.remaining);
         layer.remaining -= r;
         this.cleanRemoved += r;
 
-        // 擦除笔迹
-        const g = this.cleanScrapeGfx;
-        g.fillStyle(0x1a0f0a, 0.35);
-        g.fillCircle(px, py, 16);
-        g.fillStyle(0x2c1810, 0.2);
-        g.fillCircle(px, py, 10);
-
-        if (layer.remaining <= 0) {
-            this.cleanCurLayer++;
-            if (this.cleanCurLayer >= 3) {
-                this.finishCleanJob();
-                return;
-            }
-            this.showMessage(`🧹 ${layer.name} 已清理干净！`);
+        // ── 橡皮擦：局部擦除泥土 RenderTexture ──
+        if (this.cleanDirtRT && this.cleanEraserGfx) {
+            this.cleanDirtRT.erase(this.cleanEraserGfx, px - ex.x, py - ex.y);
         }
 
-        this.drawCleanStrata();
+        // ── 双向扫刷痕（左→右 + 右→左 交替纹理）──
+        const g = this.cleanScrapeGfx;
+        const dirX = this._cleanLastX != null ? px - this._cleanLastX : 14;
+        const dirY = this._cleanLastY != null ? py - this._cleanLastY : 0;
+        const sweepLen = Math.sqrt(dirX * dirX + dirY * dirY) || 1;
+        const nx = dirX / sweepLen;
+        const ny = dirY / sweepLen;
+
+        // 主刷痕 — 沿移动方向的椭圆
+        const majorR = 22, minorR = 10;
+        g.fillStyle(0x1a0f0a, 0.45);
+        // 用多个小圆近似椭圆
+        for (let bi = -5; bi <= 5; bi++) {
+            const t = bi / 5;
+            const cx = px + nx * t * majorR * 0.7;
+            const cy = py + ny * t * majorR * 0.7;
+            const cr = minorR * (1 - Math.abs(t) * 0.5);
+            g.fillCircle(cx, cy, cr);
+        }
+        // 刷毛纹理条纹
+        g.fillStyle(0x2c1810, 0.3);
+        const perpX = -ny, perpY = nx;
+        for (let bi = -2; bi <= 2; bi++) {
+            const ox = perpX * bi * 4;
+            const oy = perpY * bi * 4;
+            for (let si = -4; si <= 4; si++) {
+                const t = si / 4;
+                const cx = px + nx * t * majorR * 0.5 + ox;
+                const cy = py + ny * t * majorR * 0.5 + oy;
+                g.fillCircle(cx, cy, 2 + Math.random() * 1.5);
+            }
+        }
+
+        this._cleanLastX = px;
+        this._cleanLastY = py;
+
+        // ── 刷痕渐隐 ──
+        const fadeX = px, fadeY = py;
+        this.time.delayedCall(2000, () => {
+            if (!this.cleanScrapeGfx) return;
+            const fadeG = this.add.graphics().setDepth(10);
+            fadeG.fillStyle(0x1a0f0a, 0.4);
+            for (let bi = -5; bi <= 5; bi++) {
+                const t = bi / 5;
+                fadeG.fillCircle(fadeX + t * majorR * 0.7, fadeY, minorR * (1 - Math.abs(t) * 0.5));
+            }
+            this.tweens.add({
+                targets: fadeG, alpha: 0, duration: 800,
+                onComplete: () => fadeG.destroy()
+            });
+        });
+
+        // ── 尘土粒子（多颗同时飞溅）──
+        const dustCount = 3 + Math.floor(Math.random() * 4);
+        for (let di = 0; di < dustCount; di++) {
+            const d = this.add.graphics().setDepth(30);
+            const dColor = di % 2 === 0 ? layer.darkColor : layer.color;
+            d.fillStyle(dColor, 0.45);
+            d.fillCircle(0, 0, 1.5 + Math.random() * 2.5);
+            d.setPosition(px + (Math.random() - 0.5) * 20, py);
+            this.tweens.add({
+                targets: d,
+                y: d.y - 12 - Math.random() * 25,
+                x: d.x + (Math.random() - 0.5) * 35,
+                alpha: 0, scaleX: 0.3, scaleY: 0.3,
+                duration: 250 + Math.random() * 300,
+                ease: 'Sine.easeOut',
+                onComplete: () => { if (d.scene) d.destroy(); }
+            });
+        }
+
+        // ── 碎石块散射 ──
+        if (Math.random() < 0.35) {
+            const peb = this.add.graphics().setDepth(28);
+            const pr = 2 + Math.random() * 3;
+            const pebColor = Phaser.Math.RND.pick([0x7B6B5A, 0x8B7B6A, 0x6B5B4A]);
+            peb.fillStyle(pebColor, 0.55);
+            peb.fillCircle(0, 0, pr);
+            peb.fillStyle(pebColor, 0.3);
+            peb.fillCircle(pr * 0.3, -pr * 0.2, pr * 0.5);
+            peb.setPosition(px, py);
+            const angle = Math.random() * Math.PI * 2;
+            const dist = 20 + Math.random() * 40;
+            this.tweens.add({
+                targets: peb,
+                x: px + Math.cos(angle) * dist,
+                y: py + Math.sin(angle) * dist - 5,
+                alpha: 0, scaleX: 0.4, scaleY: 0.4,
+                duration: 350 + Math.random() * 250,
+                ease: 'Quad.easeOut',
+                onComplete: () => { if (peb.scene) peb.destroy(); }
+            });
+        }
+
+        if (layer.remaining <= 0) {
+            this._onCleanLayerDone(layer);
+            return;
+        }
+
         if (this.cleanHintText && this.cleanCurLayer < 3) {
             this.cleanHintText.setText(`🧹 ${this.cleanLayers[this.cleanCurLayer].name}还有残留...`);
         }
+    }
+
+    _onCleanLayerDone(layer) {
+        const ex = this.config.excavation;
+        const lh = ex.height / 3;
+        const ly = ex.y + this.cleanCurLayer * lh;
+
+        // ── 层清完：环状冲击波 ──
+        for (let ri = 0; ri < 3; ri++) {
+            const ring = this.add.graphics().setDepth(15);
+            const startR = 0, endR = ex.width * 0.7;
+            ring.lineStyle(2, 0xF4D03F, 0.6 - ri * 0.15);
+            ring.strokeCircle(ex.x + ex.width / 2, ly + lh / 2, startR);
+            this.tweens.add({
+                targets: ring, alpha: 0,
+                duration: 400 + ri * 150,
+                onUpdate: (tw) => {
+                    ring.clear();
+                    const cr = startR + (endR - startR) * tw.progress;
+                    ring.lineStyle(2, 0xF4D03F, (0.6 - ri * 0.15) * (1 - tw.progress));
+                    ring.strokeCircle(ex.x + ex.width / 2, ly + lh / 2, cr);
+                },
+                onComplete: () => ring.destroy()
+            });
+        }
+
+        // ── 大块泥土颗粒塌落 ──
+        for (let ci = 0; ci < 15; ci++) {
+            const clump = this.add.graphics().setDepth(20);
+            const cSize = 3 + Math.random() * 6;
+            clump.fillStyle(Phaser.Math.RND.pick([layer.darkColor, layer.color, 0x6B5B4A]), 0.6);
+            clump.fillCircle(0, 0, cSize);
+            clump.fillCircle(cSize * 0.3, -cSize * 0.3, cSize * 0.5);
+            const cx = ex.x + Math.random() * ex.width;
+            const cy = ly + Math.random() * lh;
+            clump.setPosition(cx, cy);
+            this.tweens.add({
+                targets: clump,
+                y: cy + 40 + Math.random() * 50,
+                x: cx + (Math.random() - 0.5) * 60,
+                angle: Math.random() * 180 - 90,
+                alpha: 0, scaleX: 0.3, scaleY: 0.3,
+                duration: 500 + Math.random() * 400,
+                ease: 'Quad.easeIn',
+                onComplete: () => { if (clump.scene) clump.destroy(); }
+            });
+        }
+
+        // ── 闪光 ──
+        this.cameras.main.flash(200, 50, 40, 15);
+        // ── 探方区域短暂高亮 ──
+        const glowOverlay = this.add.graphics().setDepth(12);
+        glowOverlay.fillStyle(0xF4D03F, 0.12);
+        glowOverlay.fillRect(ex.x, ly, ex.width, lh);
+        this.tweens.add({
+            targets: glowOverlay, alpha: 0, duration: 800,
+            onComplete: () => glowOverlay.destroy()
+        });
+
+        // ── 推进下一层 ──
+        this.cleanCurLayer++;
+        this._cleanLastX = null;
+        this._cleanLastY = null;
+        if (this.cleanScrapeGfx) this.cleanScrapeGfx.clear();
+
+        if (this.cleanCurLayer >= 3) {
+            this.time.delayedCall(300, () => this.finishCleanJob());
+            return;
+        }
+        const next = this.cleanLayers[this.cleanCurLayer];
+        this.showMessage(`🧹 ${layer.name} 已清理干净！下一层：${next.name}`);
     }
 
     finishCleanJob() {
         const earn = Phaser.Math.Between(300, 500);
         this.economy.addFunds(earn);
         if (this.audio) this.audio.jobComplete();
+        const ex = this.config.excavation;
 
-        if (this.cleanHintText) this.cleanHintText.setText(`✅ 完成！+¥${earn}`);
+        // ── 探方全清：金色光晕扩散 ──
+        for (let ri = 0; ri < 4; ri++) {
+            const ring = this.add.graphics().setDepth(15);
+            const cx = ex.x + ex.width / 2;
+            const cy = ex.y + ex.height / 2;
+            ring.lineStyle(2, 0xF4D03F, 0.5 - ri * 0.1);
+            ring.strokeCircle(cx, cy, 0);
+            this.tweens.add({
+                targets: ring, alpha: 0,
+                duration: 500 + ri * 180,
+                delay: ri * 100,
+                onUpdate: (tw) => {
+                    ring.clear();
+                    const cr = tw.progress * ex.width * 0.6;
+                    ring.lineStyle(2, 0xF4D03F, (0.5 - ri * 0.1) * (1 - tw.progress));
+                    ring.strokeCircle(cx, cy, cr);
+                },
+                onComplete: () => ring.destroy()
+            });
+        }
+
+        // ── 干净表面整体闪光 ──
+        this.cameras.main.flash(300, 50, 40, 20);
+        const glowSurface = this.add.graphics().setDepth(9);
+        glowSurface.fillStyle(0x5C3D28, 1);
+        glowSurface.fillRect(ex.x, ex.y, ex.width, ex.height);
+        glowSurface.fillStyle(0xF4D03F, 0.2);
+        glowSurface.fillRect(ex.x, ex.y, ex.width, ex.height);
+        this.tweens.add({
+            targets: glowSurface, alpha: 0,
+            duration: 1500, ease: 'Sine.easeOut',
+            onComplete: () => glowSurface.destroy()
+        });
+
+        // ── 完成的文字提示动画 ──
+        if (this.cleanHintText) {
+            this.cleanHintText.setText(`✅ 清理完成！+¥${earn}`);
+            this.cleanHintText.setAlpha(1);
+            this.cleanHintText.setScale(1);
+            this.tweens.add({
+                targets: this.cleanHintText, scale: 1.3, alpha: 0,
+                duration: 1000, ease: 'Sine.easeOut'
+            });
+        }
 
         this.laborCleanCooldown = 8;
         this.laborCleanLabel.setColor('#666666');
@@ -739,7 +1041,7 @@ class MainScene extends Phaser.Scene {
 
         this.showToast(`🧹 探方清理完成！+¥${earn}`);
 
-        this.time.delayedCall(800, () => this.cleanupMinigame());
+        this.time.delayedCall(1200, () => this.cleanupMinigame());
         this.startLaborTimer('clean');
         this.updateUI();
         this.state.save();
@@ -910,10 +1212,26 @@ class MainScene extends Phaser.Scene {
         this.input.off('pointermove');
         this.input.off('pointerup');
 
+        // 停止悬浮尘埃
+        this._stopFloatingDust();
+
         // 清理探方相关
-        if (this.cleanStrataGfx) { this.cleanStrataGfx.forEach(g => g.destroy()); this.cleanStrataGfx = null; }
+        if (this.cleanDirtRT) { this.cleanDirtRT.destroy(); this.cleanDirtRT = null; }
+        if (this.cleanEraserGfx) { this.cleanEraserGfx.destroy(); this.cleanEraserGfx = null; }
         if (this.cleanScrapeGfx) { this.cleanScrapeGfx.destroy(); this.cleanScrapeGfx = null; }
+        if (this.cleanBaseGfx) { this.cleanBaseGfx.destroy(); this.cleanBaseGfx = null; }
+        if (this.textures.exists('_cleanDirtCanvas')) { this.textures.remove('_cleanDirtCanvas'); }
         if (this.cleanHintText) { this.cleanHintText.destroy(); this.cleanHintText = null; }
+        if (this.cleanBrushCursor) {
+            this.cleanBrushCursor.destroy();
+            this.cleanBrushCursor = null;
+        }
+        if (this._brushCursorHandler) {
+            this.input.off('pointermove', this._brushCursorHandler);
+            this._brushCursorHandler = null;
+        }
+        this._cleanLastX = null;
+        this._cleanLastY = null;
 
         // 修复陶片相关
         if (this.potteryBase) { this.potteryBase.destroy(); this.potteryBase = null; }
@@ -922,6 +1240,11 @@ class MainScene extends Phaser.Scene {
         if (this.potteryParticles) { this.potteryParticles.forEach(p => { if (p && p.destroy) p.destroy(); }); this.potteryParticles = null; }
         if (this.potteryBaseText) { this.potteryBaseText.destroy(); this.potteryBaseText = null; }
         if (this.potteryPctText) { this.potteryPctText.destroy(); this.potteryPctText = null; }
+
+        // 恢复正常的挖掘地层显示
+        if (this.strataGraphics) this.strataGraphics.forEach(g => g.setVisible(true));
+        if (this.scrapeLayer) this.scrapeLayer.setVisible(true);
+        if (this.artifactOutline) this.artifactOutline.setVisible(true);
 
         // 恢复界面
         this.drawSoilPreview();
@@ -1220,7 +1543,56 @@ class MainScene extends Phaser.Scene {
             ).setOrigin(0.5).setAlpha(0).setDepth(15);
         }
 
+        // ── 悬浮尘埃系统 ──
+        this._startFloatingDust(ex);
+
         this.drawStrata();
+    }
+
+    /** 悬浮尘土粒子 — 探方区域缓慢飘浮的微尘 */
+    _startFloatingDust(ex, dense = false) {
+        this._dustParticles = [];
+        this._dustDense = dense;
+        this._dustTimer = this.time.addEvent({
+            delay: dense ? 350 : 800,
+            loop: true,
+            callback: () => {
+                if (!this.isDigging && !this.isLaboring) return;
+                const spawnCount = dense ? 2 : 1;
+                for (let s = 0; s < spawnCount; s++) {
+                    const p = this.add.graphics().setDepth(4);
+                    const dSize = (dense ? 1.2 : 0.8) + Math.random() * (dense ? 2.5 : 1.8);
+                    const alpha = (dense ? 0.2 : 0.12) + Math.random() * (dense ? 0.15 : 0.1);
+                    p.fillStyle(0xC4A46A, alpha);
+                    p.fillCircle(0, 0, dSize);
+                    const startX = ex.x + Math.random() * ex.width;
+                    const startY = ex.y + ex.height - Math.random() * ex.height * 0.6;
+                    p.setPosition(startX, startY);
+                    this._dustParticles.push(p);
+                    this.tweens.add({
+                        targets: p,
+                        y: startY - 40 - Math.random() * 60,
+                        x: startX + (Math.random() - 0.5) * 50,
+                        alpha: 0, scaleX: 0.3, scaleY: 0.3,
+                        duration: 2000 + Math.random() * 3000,
+                        ease: 'Sine.easeOut',
+                        onComplete: () => {
+                            const idx = this._dustParticles ? this._dustParticles.indexOf(p) : -1;
+                            if (idx >= 0) this._dustParticles.splice(idx, 1);
+                            p.destroy();
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    _stopFloatingDust() {
+        if (this._dustTimer) { this._dustTimer.destroy(); this._dustTimer = null; }
+        if (this._dustParticles) {
+            this._dustParticles.forEach(p => { if (p && p.scene) p.destroy(); });
+            this._dustParticles = null;
+        }
     }
 
     drawStrata() {
@@ -1237,15 +1609,44 @@ class MainScene extends Phaser.Scene {
             const y = yOffset + (layerHeight - remainingHeight);
 
             if (remainingHeight <= 0 && index < this.soilLayers.length - 1) {
-                g.fillStyle(layer.lightColor, 0.3);
+                // 已挖穿的层：浅色残留
+                g.fillStyle(layer.lightColor, 0.25);
                 g.fillRect(ex.x, yOffset, ex.width, layerHeight);
-                g.lineStyle(1, layer.lightColor, 0.4);
-                g.lineBetween(ex.x, yOffset, ex.x + ex.width, yOffset);
+                // 锯齿下缘（模拟铲痕不平整）
+                g.fillStyle(layer.lightColor, 0.35);
+                const botY = yOffset + layerHeight;
+                for (let sx = ex.x; sx < ex.x + ex.width; sx += 8) {
+                    const jh = 1 + Math.random() * 4;
+                    g.fillRect(sx, botY - jh, 7, jh);
+                }
             } else if (remainingHeight > 0) {
                 const lerpFactor = layer.remaining / layer.soilVolume;
                 const color = this.lerpColor(layer.color, layer.lightColor, 1 - lerpFactor);
                 g.fillStyle(color, 1);
                 g.fillRect(ex.x, y, ex.width, remainingHeight);
+
+                // 锯齿顶边（当前正在挖的表层，模拟不规则的铲痕边缘）
+                const jaggedY = y;
+                const nextColor = index > 0
+                    ? this.lerpColor(this.soilLayers[index - 1].lightColor, layer.color, 0.3)
+                    : layer.lightColor;
+                g.fillStyle(nextColor, 0.8);
+                for (let sx = ex.x; sx < ex.x + ex.width; sx += 6) {
+                    const jh = 1 + Math.random() * 3;
+                    g.fillRect(sx, jaggedY - jh, 5, jh + 1);
+                }
+
+                // 层间渐变色带（柔滑过渡）
+                if (index > 0) {
+                    const prevLayer = this.soilLayers[index - 1];
+                    const fadeH = Math.min(12, remainingHeight * 0.3);
+                    for (let fy = 0; fy < fadeH; fy++) {
+                        const t = fy / fadeH;
+                        const blendColor = this.lerpColor(prevLayer.lightColor, color, t);
+                        g.fillStyle(blendColor, 0.4 - t * 0.3);
+                        g.fillRect(ex.x, jaggedY + fy, ex.width, 1);
+                    }
+                }
 
                 if (index < this.soilLayers.length - 1) {
                     this.drawSoilTexture(g, ex.x, y, ex.width, remainingHeight, layer);
@@ -1259,6 +1660,17 @@ class MainScene extends Phaser.Scene {
 
             yOffset += layerHeight;
         });
+
+        // ── 深度暗化覆盖（越深越暗，模拟坑中光影）──
+        const totalDepth = this.removedSoilVolume / this.totalSoilVolume;
+        if (totalDepth > 0 && this.strataGraphics.length > 0) {
+            const overlay = this.strataGraphics[this.strataGraphics.length - 1];
+            if (overlay) {
+                overlay.fillStyle(0x050302, 0.15 + totalDepth * 0.3);
+                const ovY = ex.y + ex.height * totalDepth;
+                overlay.fillRect(ex.x, ovY, ex.width, ex.height * (1 - totalDepth));
+            }
+        }
     }
 
     drawSoilTexture(g, x, y, w, h, layer) {
@@ -1324,6 +1736,10 @@ class MainScene extends Phaser.Scene {
         if (!layer || layer.remaining <= 0) return;
 
         if (this.audio) this.audio.dig();
+        // ── 硬质层（砂砾/堆积层）铲子反震抖动 ──
+        if (this.currentLayer === 2 && Math.random() < 0.3) {
+            this.cameras.main.shake(50, 0.003);
+        }
 
         const baseDigPower = 1.5;
         const rangeBonus = this.state.getUpgradeEffect('brushSize');
@@ -1382,21 +1798,92 @@ class MainScene extends Phaser.Scene {
 
     showLayerTransition(nextLayer) {
         const ex = this.config.excavation;
-        this.cameras.main.flash(100, 40, 30, 5);
+        const cx = ex.x + ex.width / 2;
+        const cy = ex.y + ex.height / 2;
+        this.cameras.main.flash(120, 40, 30, 5);
         if (this.audio) this.audio.layerBreak();
-        // 显示进入新地层提示
-        const label = this.add.text(ex.x + ex.width / 2, ex.y + ex.height / 2,
+
+        // ── 文物层入口：金光特效 ──
+        if (nextLayer.texture === 'artifact') {
+            // 金色边框脉冲
+            const glowBorder = this.add.graphics().setDepth(35);
+            for (let t = 0; t < 12; t++) {
+                this.time.delayedCall(t * 80, () => {
+                    glowBorder.clear();
+                    const alpha = 1 - t / 12;
+                    glowBorder.lineStyle(3 + t % 3, 0xd4a574, 0.5 + alpha * 0.5);
+                    glowBorder.strokeRect(ex.x - 3, ex.y - 3, ex.width + 6, ex.height + 6);
+                });
+            }
+            this.time.delayedCall(1200, () => glowBorder.destroy());
+
+            // 金色粒子喷发在文物埋藏位置
+            const artX = cx;
+            const artY = ex.y + ex.height * 0.85;
+            for (let i = 0; i < 10; i++) {
+                this.time.delayedCall(i * 50, () => {
+                    const spark = this.add.graphics().setDepth(40);
+                    spark.fillStyle(0xF4D03F, 0.9);
+                    spark.fillCircle(0, 0, 2 + Math.random() * 3);
+                    spark.setPosition(artX + (Math.random() - 0.5) * 80, artY);
+                    this.tweens.add({
+                        targets: spark,
+                        y: spark.y - 20 - Math.random() * 40,
+                        alpha: 0, scaleX: 0.1, scaleY: 0.1,
+                        duration: 600 + Math.random() * 400,
+                        ease: 'Power2',
+                        onComplete: () => spark.destroy()
+                    });
+                });
+            }
+        }
+
+        // ── 层裂动画：裂纹从中心蔓延 ──
+        const crackGfx = this.add.graphics().setDepth(38);
+        const totalCracks = 8;
+        for (let i = 0; i < totalCracks; i++) {
+            this.time.delayedCall(i * 30, () => {
+                const angle = (i / totalCracks) * Math.PI * 2 + (Math.random() - 0.5) * 0.3;
+                const len = 30 + Math.random() * 80;
+                crackGfx.lineStyle(i % 3 + 1, 0xf5e6d3, 0.6);
+                crackGfx.beginPath();
+                crackGfx.moveTo(cx, cy - 20);
+                let cx2 = cx, cy2 = cy - 20;
+                for (let s = 0; s < 3; s++) {
+                    cx2 += Math.cos(angle + (Math.random() - 0.5) * 0.8) * len / 3;
+                    cy2 += Math.sin(angle + (Math.random() - 0.5) * 0.8) * len / 3;
+                    crackGfx.lineTo(cx2, cy2);
+                }
+                crackGfx.strokePath();
+            });
+        }
+        // 裂纹消散
+        this.tweens.add({
+            targets: crackGfx, alpha: 0, duration: 800, delay: 600,
+            onComplete: () => crackGfx.destroy()
+        });
+
+        // ── 地层名揭示（放大弹出 + 回弹）──
+        const tColor = nextLayer.texture === 'artifact' ? '#f4d03f' : '#e8d5b0';
+        const label = this.add.text(cx, cy,
             `▼ ${nextLayer.name} ▼\n${nextLayer.desc}`, {
-                fontSize: '18px', fontFamily: GameConfig.typography.fontFamily,
-                color: '#f4d03f', fontStyle: 'bold',
-                align: 'center', stroke: '#000000', strokeThickness: 3
-            }).setOrigin(0.5).setDepth(40).setAlpha(0);
+                fontSize: '20px', fontFamily: GameConfig.typography.fontFamily,
+                color: tColor, fontStyle: 'bold',
+                align: 'center', stroke: '#000000', strokeThickness: 4
+            }).setOrigin(0.5).setDepth(40).setScale(0.5).setAlpha(0);
 
         this.tweens.add({
-            targets: label, alpha: 1, y: label.y - 20,
-            duration: 600, ease: 'Power2',
-            yoyo: true, hold: 800,
-            onComplete: () => label.destroy()
+            targets: label,
+            scaleX: 1, scaleY: 1, alpha: 1,
+            duration: 400, ease: 'Back.easeOut',
+            onComplete: () => {
+                this.tweens.add({
+                    targets: label,
+                    alpha: 0, y: label.y - 30,
+                    duration: 500, delay: 1000, ease: 'Power2',
+                    onComplete: () => label.destroy()
+                });
+            }
         });
     }
 
@@ -1437,24 +1924,45 @@ class MainScene extends Phaser.Scene {
         const cy = ex.y + ex.height * 0.85;
         const rarityData = ArtifactData.rarity[this.currentArtifact.rarity];
         const color = parseInt(rarityData.color.replace('#', '0x'));
+        const t = this.time.now / 1000;
 
-        // 脉冲效果
-        const pulse = 1 + Math.sin((this.time.now / 600)) * 0.07;
+        // ── 呼吸脉冲光环 ──
+        const breathSpeed = alpha > 0.7 ? 0.004 : 0.006; // 接近文物时心跳加速
+        const pulse = 1 + Math.sin(t * breathSpeed * Math.PI * 2) * 0.06;
         const r1 = 80 * pulse;
         const r2 = 45 * pulse;
 
-        g.fillStyle(color, alpha * 0.15);
+        // 外层柔和光晕
+        g.fillStyle(color, alpha * 0.12);
+        g.fillCircle(cx, cy, r1 + 15);
+        g.fillStyle(color, alpha * 0.2);
         g.fillCircle(cx, cy, r1);
-        g.fillStyle(color, alpha * 0.3);
+        // 内层亮核
+        g.fillStyle(color, alpha * 0.35);
         g.fillCircle(cx, cy, r2);
+
+        // ── 光环外散布未剥离的土片 ──
+        if (alpha > 0.3 && alpha < 0.95) {
+            const peelCount = Math.floor(alpha * 12);
+            for (let i = 0; i < peelCount; i++) {
+                const pa = (i / peelCount) * Math.PI * 2 + t * 0.3;
+                const pd = r1 + 5 + Math.random() * 25;
+                const px = cx + Math.cos(pa) * pd;
+                const py = cy + Math.sin(pa) * pd;
+                g.fillStyle(this.soilLayers[3] ? this.soilLayers[3].color : 0x6B4F3A, 0.5);
+                const psize = 3 + Math.random() * 5;
+                g.fillCircle(px, py, psize);
+            }
+        }
 
         if (alpha < 0.80) {
             if (this.artifactLabel) this.artifactLabel.setAlpha(0);
-            // 清除文物图标
             if (this.artifactIcon) { this.artifactIcon.destroy(); this.artifactIcon = null; }
             const qAlpha = alpha < 0.15 ? 1 : 1 - (alpha - 0.15) / 0.65;
             if (this.questionMark) this.questionMark.destroy();
-            this.questionMark = this.add.text(cx, cy, '?', {
+            // ── ❓ 悬浮抖动 ──
+            const qBob = Math.sin(t * 3) * 3;
+            this.questionMark = this.add.text(cx, cy + qBob, '?', {
                 fontSize: '48px', fontFamily: 'serif',
                 color: '#f5e6d3', fontStyle: 'bold'
             }).setOrigin(0.5).setAlpha(Math.max(0.1, qAlpha * 0.8)).setDepth(12);
@@ -1464,19 +1972,38 @@ class MainScene extends Phaser.Scene {
                 this.artifactLabel.setText(this.currentArtifact.name);
                 this.artifactLabel.setAlpha((alpha - 0.80) / 0.20);
             }
-            // alpha >= 0.80: 揭示文物图标
+            // alpha >= 0.80: 揭示文物图标（从土中浮出）
             if (!this.artifactIcon) {
                 const iconKey = this.getArtifactIconKey(this.currentArtifact);
                 if (iconKey) {
                     this.artifactIcon = this.add.image(cx, cy - 15, iconKey)
-                        .setDisplaySize(80, 80)
+                        .setDisplaySize(36, 36)
                         .setAlpha(0)
+                        .setScale(0.3)
                         .setDepth(13);
+                    // 旋转浮出 + 弹性回弹
                     this.tweens.add({
                         targets: this.artifactIcon,
-                        alpha: 1,
-                        duration: 300
+                        scaleX: 1, scaleY: 1, alpha: 1,
+                        angle: { from: -15, to: 0 },
+                        duration: 500,
+                        ease: 'Back.easeOut'
                     });
+                    // 伴随落下尘土
+                    for (let d = 0; d < 6; d++) {
+                        this.time.delayedCall(d * 40, () => {
+                            const dust = this.add.graphics().setDepth(14);
+                            dust.fillStyle(0x9B7B4A, 0.6);
+                            dust.fillCircle(0, 0, 2 + Math.random() * 3);
+                            dust.setPosition(cx + (Math.random() - 0.5) * 40, cy - 50);
+                            this.tweens.add({
+                                targets: dust,
+                                y: dust.y + 20 + Math.random() * 30,
+                                alpha: 0, duration: 400, ease: 'Quad.easeIn',
+                                onComplete: () => dust.destroy()
+                            });
+                        });
+                    }
                 }
             }
         }
@@ -1489,51 +2016,104 @@ class MainScene extends Phaser.Scene {
 
         const g = this.scrapeLayer;
         if (!g) return;
-        g.fillStyle(0x1a0f0a, 0.4);
-
+        // ── 楔形铲印（深色凹痕 + 两侧隆起）──
+        g.fillStyle(0x0d0704, 0.6);
         const sx = Math.max(ex.x, x - markWidth / 2);
         const sw = Math.min(markWidth, ex.width - (sx - ex.x));
-        const sy = Math.max(ex.y, y - 3);
+        const sy = Math.max(ex.y, y - 4);
+        // 铲印主体（楔形：中间深、边缘浅）
+        g.fillRect(sx, sy, sw, 8);
+        // 铲痕边缘隆起（模拟泥土被铲子挤开的翻边）
+        g.fillStyle(this.soilLayers[this.currentLayer] ? this.soilLayers[this.currentLayer].lightColor : 0x9B7B4A, 0.35);
+        g.fillRect(sx - 3, sy - 2, 3, 12);
+        g.fillRect(sx + sw, sy - 2, 3, 12);
+        // 铲痕内部纹理（平行刮线）
+        g.fillStyle(0x0a0502, 0.3);
+        for (let ln = 0; ln < 4; ln++) {
+            g.fillRect(sx + 3 + ln * (sw / 4), sy + 1, sw / 6, 6);
+        }
 
-        g.fillRect(sx, sy, sw, 6);
-        g.fillStyle(0x3d2817, 0.3);
-        g.fillRect(sx - 2, sy - 1, 4, 8);
-        g.fillRect(sx + sw - 2, sy - 1, 4, 8);
-
-        this.time.delayedCall(1000, () => {
-            if (this.scrapeLayer) this.scrapeLayer.clear();
+        // ── 铲印残留动画：2.5秒慢慢"愈合"（被松土填平）──
+        this.time.delayedCall(1200, () => {
+            if (!this.scrapeLayer || !g || !g.scene) return;
+            const fadeG = this.add.graphics().setDepth(10);
+            fadeG.fillStyle(0x0d0704, 0.5);
+            fadeG.fillRect(sx, sy, sw, 8);
+            this.tweens.add({
+                targets: fadeG, alpha: 0, duration: 1200, ease: 'Sine.easeIn',
+                onComplete: () => fadeG.destroy()
+            });
         });
     }
 
     spawnDigParticles(x, y) {
-        const count = Phaser.Math.Between(5, 10);
+        // ── 大块土块崩落（重力下落）──
+        const chunkCount = Phaser.Math.Between(3, 6);
         const layer = this.soilLayers[Math.min(this.currentLayer, this.soilLayers.length - 1)];
-
-        for (let i = 0; i < count; i++) {
-            const angle = -Math.PI/2 + (Math.random() - 0.5) * Math.PI;
-            const dist = 20 + Math.random() * 40;
-            const size = Phaser.Math.Between(2, 5);
-            const color = Phaser.Display.Color.IntegerToColor(layer.color);
-            const rOffset = Phaser.Math.Between(-20, 20);
-            const colorAdj = Phaser.Display.Color.GetColor(
-                Math.min(255, color.red + rOffset),
-                Math.min(255, color.green + rOffset),
-                Math.min(255, color.blue + rOffset)
+        for (let i = 0; i < chunkCount; i++) {
+            const g = this.add.graphics().setDepth(25);
+            const angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.6;
+            const dist = 50 + Math.random() * 80;
+            const size = 3 + Math.random() * 5;
+            const colorAdj = Phaser.Display.Color.IntegerToColor(layer.color);
+            const rOff = Phaser.Math.Between(-20, 20);
+            const clr = Phaser.Display.Color.GetColor(
+                Math.min(255, colorAdj.red + rOff),
+                Math.min(255, colorAdj.green + rOff),
+                Math.min(255, colorAdj.blue + rOff)
             );
+            // 不规则多边形土块
+            const pts = [];
+            const pc = 4 + Math.floor(Math.random() * 3);
+            for (let p = 0; p < pc; p++) {
+                const pa = (p / pc) * Math.PI * 2;
+                const pr = size * (0.5 + Math.random() * 0.5);
+                pts.push({ x: Math.cos(pa) * pr, y: Math.sin(pa) * pr });
+            }
+            g.fillStyle(clr, 0.8);
+            g.beginPath();
+            g.moveTo(pts[0].x, pts[0].y);
+            for (let p = 1; p < pts.length; p++) g.lineTo(pts[p].x, pts[p].y);
+            g.closePath();
+            g.fillPath();
+            // 土块表面高光
+            g.fillStyle(Phaser.Display.Color.GetColor(
+                Math.min(255, colorAdj.red + 40),
+                Math.min(255, colorAdj.green + 40),
+                Math.min(255, colorAdj.blue + 40)
+            ), 0.3);
+            g.fillCircle(size * 0.15, -size * 0.2, size * 0.3);
+            g.setPosition(x, y);
 
-            const particle = this.add.graphics().setDepth(25);
-            particle.fillStyle(colorAdj, 0.8);
-            particle.fillCircle(0, 0, size);
-            particle.setPosition(x, y);
-
+            const vx = Math.cos(angle) * dist * 0.5;
+            const vy = Math.sin(angle) * dist * 0.7;
             this.tweens.add({
-                targets: particle,
-                x: x + Math.cos(angle) * dist * 0.6,
-                y: y + Math.sin(angle) * dist,
-                alpha: 0, scaleX: 0.3, scaleY: 0.3,
-                duration: 250 + Math.random() * 250,
-                ease: 'Power2',
-                onComplete: () => particle.destroy()
+                targets: g,
+                x: x + vx + Math.random() * 20 - 10,
+                y: y + vy + 40, // 重力下落
+                alpha: 0,
+                scaleX: 0.4, scaleY: 0.4,
+                angle: (Math.random() - 0.5) * 120,
+                duration: 350 + Math.random() * 300,
+                ease: 'Quad.easeIn',
+                onComplete: () => g.destroy()
+            });
+        }
+        // ── 细小尘土飘起 ──
+        const dustCount = Phaser.Math.Between(4, 7);
+        for (let i = 0; i < dustCount; i++) {
+            const d = this.add.graphics().setDepth(25);
+            d.fillStyle(Phaser.Display.Color.HexStringToColor('#c4a46a').color, 0.5);
+            d.fillCircle(0, 0, 1 + Math.random() * 2);
+            d.setPosition(x + (Math.random() - 0.5) * 30, y);
+            this.tweens.add({
+                targets: d,
+                x: d.x + (Math.random() - 0.5) * 40,
+                y: d.y - 15 - Math.random() * 25,
+                alpha: 0, scaleX: 2, scaleY: 2,
+                duration: 500 + Math.random() * 400,
+                ease: 'Sine.easeOut',
+                onComplete: () => d.destroy()
             });
         }
     }
@@ -1665,7 +2245,6 @@ class MainScene extends Phaser.Scene {
         const rarityData = ArtifactData.rarity[this.currentArtifact.rarity];
         const isNat = this.currentArtifact.isNationalTreasure;
 
-        // 根据稀有度播放不同音效，发掘完成切回主界面 BGM
         const r = this.currentArtifact.rarity;
         if (this.audio) {
             if (r === 'mythic') this.audio.mythic();
@@ -1673,27 +2252,73 @@ class MainScene extends Phaser.Scene {
             else this.audio.discover(r);
         }
 
-        // 发掘结束
-
         this.cameras.main.shake(600, 0.02);
         this.cameras.main.flash(300, 255, 220, 100);
 
         const ex = this.config.excavation;
+        const cx = ex.x + ex.width / 2;
+        const cy = ex.y + ex.height * 0.7;
+
+        // ── 探方白闪 ──
         const flash = this.add.graphics().setDepth(30);
-        flash.fillStyle(0xffffff, 0.8);
+        flash.fillStyle(0xffffff, 0.9);
         flash.fillRect(ex.x, ex.y, ex.width, ex.height);
         this.tweens.add({
-            targets: flash, alpha: 0, duration: 600,
+            targets: flash, alpha: 0, duration: 500,
             onComplete: () => flash.destroy()
         });
 
-        // 增强粒子庆祝效果
-        const cx = ex.x + ex.width / 2;
-        const cy = ex.y + ex.height * 0.7;
+        // ── 光芒破土：光柱从文物位置向上射出 ──
+        const beamGfx = this.add.graphics().setDepth(29);
+        for (let b = 0; b < 8; b++) {
+            const ba = (b / 8) * Math.PI * 2 + Math.random() * 0.3;
+            const topY = ex.y - 10;
+            const beamLen = (cy - topY) * (0.6 + Math.random() * 0.4);
+            beamGfx.fillStyle(0xF4D03F, 0.12 + Math.random() * 0.1);
+            beamGfx.beginPath();
+            beamGfx.moveTo(cx, cy - 25);
+            beamGfx.lineTo(cx + Math.cos(ba - 0.15) * 18, cy - beamLen);
+            beamGfx.lineTo(cx + Math.cos(ba + 0.15) * 18, cy - beamLen);
+            beamGfx.closePath();
+            beamGfx.fillPath();
+        }
+        this.tweens.add({
+            targets: beamGfx, alpha: 0, duration: 800, delay: 400,
+            onComplete: () => beamGfx.destroy()
+        });
+
+        // ── 稀有度全屏余辉（传说/神话/国宝级）──
+        const isEpic = r === 'legendary' || r === 'mythic' || isNat;
+        if (isEpic) {
+            const overlayColor = parseInt(rarityData.color.replace('#', '0x'));
+            const rarityFlash = this.add.graphics().setDepth(99);
+            rarityFlash.fillStyle(overlayColor, 0.25);
+            rarityFlash.fillRect(0, 0, this.config.width, this.config.height);
+            rarityFlash.fillStyle(overlayColor, 0.15);
+            rarityFlash.fillRect(0, 0, this.config.width, this.config.height);
+            this.tweens.add({
+                targets: rarityFlash, alpha: 0, duration: 2000, ease: 'Sine.easeOut',
+                onComplete: () => rarityFlash.destroy()
+            });
+        }
+
+        // 粒子庆祝效果
         const particleColors = isNat
             ? ['#f4d03f', '#ff6b35', '#ffeaa7', '#ffd700', '#fff8dc']
             : (rarityData.color ? [rarityData.color, '#f4d03f', '#fff8e7'] : ['#d4a574', '#f4d03f', '#fff8e7']);
         this.spawnCelebrationBurst(cx, cy, isNat ? 24 : 12, particleColors);
+
+        // ── 发光凹坑余韵（文物出土位置留下的光晕）──
+        const glowHole = this.add.graphics().setDepth(28);
+        const holeR = 50;
+        glowHole.fillStyle(0xF4D03F, 0.4);
+        glowHole.fillCircle(cx, ex.y + ex.height * 0.85, holeR);
+        glowHole.fillStyle(0xFFF8DC, 0.2);
+        glowHole.fillCircle(cx, ex.y + ex.height * 0.85, holeR * 0.6);
+        this.tweens.add({
+            targets: glowHole, alpha: 0, duration: 2500, ease: 'Sine.easeOut',
+            onComplete: () => glowHole.destroy()
+        });
 
         // 增强通知
         if (isNat) {
@@ -1944,6 +2569,8 @@ class MainScene extends Phaser.Scene {
         // 清理进度UI
         if (this.progressBg) { this.progressBg.destroy(); this.progressBg = null; }
         if (this.progressFill) { this.progressFill.destroy(); this.progressFill = null; }
+        // 清理悬浮尘埃
+        this._stopFloatingDust();
         // 清理可能残留的零活图形
         this.cleanupMinigameLeftovers();
 
@@ -1963,9 +2590,23 @@ class MainScene extends Phaser.Scene {
     }
 
     cleanupMinigameLeftovers() {
-        if (this.cleanStrataGfx) { this.cleanStrataGfx.forEach(g => g.destroy()); this.cleanStrataGfx = null; }
+        if (this.cleanDirtRT) { this.cleanDirtRT.destroy(); this.cleanDirtRT = null; }
+        if (this.cleanEraserGfx) { this.cleanEraserGfx.destroy(); this.cleanEraserGfx = null; }
         if (this.cleanScrapeGfx) { this.cleanScrapeGfx.destroy(); this.cleanScrapeGfx = null; }
+        if (this.cleanBaseGfx) { this.cleanBaseGfx.destroy(); this.cleanBaseGfx = null; }
+        if (this.textures.exists('_cleanDirtCanvas')) { this.textures.remove('_cleanDirtCanvas'); }
         if (this.cleanHintText) { this.cleanHintText.destroy(); this.cleanHintText = null; }
+        if (this.cleanBrushCursor) { this.cleanBrushCursor.destroy(); this.cleanBrushCursor = null; }
+        if (this._brushCursorHandler) {
+            this.input.off('pointermove', this._brushCursorHandler);
+            this._brushCursorHandler = null;
+        }
+        this._cleanLastX = null;
+        this._cleanLastY = null;
+        // 恢复正常的挖掘地层显示
+        if (this.strataGraphics) this.strataGraphics.forEach(g => g.setVisible(true));
+        if (this.scrapeLayer) this.scrapeLayer.setVisible(true);
+        if (this.artifactOutline) this.artifactOutline.setVisible(true);
         if (this.potteryBase) { this.potteryBase.destroy(); this.potteryBase = null; }
         if (this.potteryCrackGfx) { this.potteryCrackGfx.forEach(g => g.destroy()); this.potteryCrackGfx = null; }
         if (this.potteryIndicators) { this.potteryIndicators.forEach(m => m.destroy()); this.potteryIndicators = null; }

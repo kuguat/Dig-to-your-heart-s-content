@@ -275,7 +275,7 @@ class ExcavationScene extends Phaser.Scene {
                 if (iconKey) {
                     try {
                         this.artifactIcon = this.add.image(cx, cy - 10, iconKey)
-                            .setDisplaySize(70, 70)
+                            .setDisplaySize(36, 36)
                             .setAlpha(0)
                             .setDepth(13);
                         this.tweens.add({

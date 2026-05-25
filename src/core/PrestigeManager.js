@@ -14,17 +14,29 @@ class PrestigeManager {
     /** 声望等级配置 */
     static TIERS = [
         { level: 0, name: '见习考古学家', threshold: 0,    color: '#c4784a',
-          unlock: '基础发掘', era: 'neolithic' },
+          unlock: '基础发掘', era: 'neolithic',
+          description: '刚入行的考古新手，佩戴见习徽章在新石器时代遗址进行基础发掘练习。\n\n🎁 新手保护：此阶段不会挖到赝品，是熟悉发掘流程、积累初始资金的黄金时期。\n\n📍 可发掘时代：新石器时代 — 彩陶、玉器、骨器等原始文明的珍贵遗存。',
+          detailTitle: '🔰 新手保护期' },
         { level: 1, name: '初级考古学家', threshold: 100,   color: '#5a7a5a',
-          unlock: '鉴定之眼', era: 'shangzhou' },
+          unlock: '鉴定之眼', era: 'shangzhou',
+          description: '通过初步考核获得正式职称，正式踏上考古探索之路。\n\n🔍 解锁「鉴定之眼」：可对出土文物进行真伪鉴定，正确鉴定可提高文物出售价格。鉴定准确率可通过升级提升。\n\n📍 解锁时代：商周 — 青铜器、甲骨文、礼器等着你发掘。\n\n⚠️ 从此阶段开始，发掘可能出现赝品。',
+          detailTitle: '🔍 解锁鉴定系统' },
         { level: 2, name: '中级考古学家', threshold: 500,   color: '#6b5b4f',
-          unlock: '博物馆', era: 'qinhan' },
+          unlock: '博物馆', era: 'qinhan',
+          description: '学术圈崭露头角，获准建立个人博物馆，展示你发掘的珍贵文物。\n\n🏛️ 解锁「博物馆」：收藏已发现的文物，可随时回顾你的考古成就。\n\n🎁 解锁「收藏家套装奖励」：集齐同一时代的全部文物，永久获得 +5% 文物价值加成，每个时代可叠加！\n\n📍 解锁时代：秦汉 — 统一王朝的珍贵遗存，兵马俑、铜车马等待出土。',
+          detailTitle: '🏛️ 解锁博物馆' },
         { level: 3, name: '高级考古学家', threshold: 2000,  color: '#c9a227',
-          unlock: '科技考古+高风险遗址', era: 'tang' },
+          unlock: '科技考古+高风险遗址', era: 'tang',
+          description: '晋升高级职称，在考古界拥有重要话语权，获得进入高风险遗址的资格。\n\n🔬 解锁「科技考古」升级线：可使用先进科技设备提升发掘效率与精度。\n\n⚠️ 解锁「高风险遗址」：这些遗址出土文物等级更高、价值更丰，但挖到赝品的概率也更大。富贵险中求！\n\n📍 解锁时代：盛唐 — 追寻大唐盛世的辉煌，唐三彩、金银器等珍宝等你发现。',
+          detailTitle: '🔬 解锁科技考古' },
         { level: 4, name: '资深考古学家', threshold: 10000, color: '#7fb3d5',
-          unlock: '文物修复工坊', era: 'songyuan' },
+          unlock: '文物修复工坊', era: 'songyuan',
+          description: '学界公认的权威专家，你的名字已被写入考古教科书。掌握文物修复技艺，能将残缺之美重焕光彩。\n\n🔧 解锁「文物修复工坊」：可修复在发掘中损坏的文物，使其重获价值。修复成功率随升级提升，高级修复甚至能提升文物等级！\n\n📍 解锁时代：宋元 — 瓷器的黄金时代，青花瓷、汝窑、钧窑等国之瑰宝静候出土。',
+          detailTitle: '🔧 解锁文物修复' },
         { level: 5, name: '首席考古学家', threshold: 50000, color: '#8e44ad',
-          unlock: '学术休假(转生)', era: 'mingqing' }
+          unlock: '学术休假(转生)', era: 'mingqing',
+          description: '考古界最高荣誉！你已站在学术之巅，获得终身成就奖。解锁终极系统——学术休假（转生）。\n\n🔄 解锁「学术休假（转生）」：重置游戏进度，将本局积累的基金点转化为永久加成奖励。\n\n🎁 转生奖励（按次数解锁）：\n  • 第1转：田野基本功 — 所有文物 +25% 价值\n  • 第2转：考古启动金 — 新档获得 +¥5,000 经费\n  • 第3转：火眼金睛 — 国宝级文物概率 +5%\n  • 第4转：科技考古 — 开局获得基础设备\n  • 每次转生永久 +2% 全属性加成\n\n📍 解锁时代：明清 — 最后的王朝，景泰蓝、宣德炉、明清瓷器等绝世珍品。',
+          detailTitle: '🔄 解锁转生系统' }
     ];
 
     /** 当前等级配置 */
@@ -274,6 +286,8 @@ class PrestigeManager {
                     color: '#444444',
                     unlock: '???',
                     era: null,
+                    description: '🔒 继续探索以解锁此等级',
+                    detailTitle: '🔒 未知',
                     visible: false,
                     unlocked: false,
                     current: false
