@@ -33,6 +33,9 @@ class ExcavationScene extends Phaser.Scene {
         // 生成随机文物
         this.currentArtifact = ArtifactData.getRandomArtifactForSite(this.era, this.site.risk);
 
+        // 预加载文物图标（避免刮土时加载延迟导致图标不显示）
+        this._preloadArtifactIcon(this.currentArtifact);
+
         // 初始化状态
         this.isRevealed = false;
         this.isCompleted = false;
@@ -931,19 +934,26 @@ class ExcavationScene extends Phaser.Scene {
 
     // ── 工具函数 ──
     /**
+     * 预加载文物图标 — 在选定文物后立即调用
+     */
+    _preloadArtifactIcon(artifact) {
+        if (!artifact) return;
+        const idKey = 'artifact_' + artifact.id;
+        if (this.textures.exists(idKey)) return;
+        if (!this._loadingIcons) this._loadingIcons = new Set();
+        if (this._loadingIcons.has(artifact.id)) return;
+        this._loadingIcons.add(artifact.id);
+        this.load.image(idKey, 'assets/artifacts/' + artifact.id + '.png');
+        this.load.start();
+    }
+
+    /**
      * 获取文物图标的纹理 key，优先级：个体纹理 → 类型纹理 → null
      */
     getArtifactIconKey(artifact) {
         if (!artifact) return null;
         const idKey = 'artifact_' + artifact.id;
         if (this.textures.exists(idKey)) return idKey;
-        // 后台按需加载
-        if (!this._loadingIcons) this._loadingIcons = new Set();
-        if (!this._loadingIcons.has(artifact.id)) {
-            this._loadingIcons.add(artifact.id);
-            this.load.image(idKey, 'assets/artifacts/' + artifact.id + '.png');
-            this.load.start();
-        }
         return null;
     }
 
