@@ -1,7 +1,7 @@
 # CLAUDE.md — 《挖个爽》考古游戏
 
 ## 项目概览
-Phaser 3 网页端文化考古模拟游戏。1200×800 画布，单 HTML + 16 个 JS 文件，Express 静态服务。
+Phaser 3 网页端文化考古模拟游戏。1200×800 画布，单 HTML + 18 个 JS 文件，Express 静态服务。
 
 ## 文物图标系统
 - 存储: `assets/artifacts/<id>.png` (256×256 PNG-24, 透明背景)
@@ -12,6 +12,12 @@ Phaser 3 网页端文化考古模拟游戏。1200×800 画布，单 HTML + 16 �
 
 ## 场景流转
 BootScene → MainScene ⇄ ExcavationScene / MuseumScene / PrestigeScene / RepairWorkshopScene
+
+## 新手教程系统
+- `src/tutorial/TutorialManager.js` — 分步引导流程（8步入门），含跨场景衔接（Step5→6 用 `window._tutorialPendingStep` 标记）
+- `src/tutorial/TutorialUI.js` — 教程 UI 层：高亮聚光灯 + 文字气泡 + 下一步按钮
+- 教程完成标记 `basic_complete` 存入 localStorage
+- 修改步骤顺序/高亮坐标时须同步验证 ExcavationScene→MainScene 场景切换的引用传递
 
 ## 声望系统（六级阶梯制）
 声望等级基于累积 `prestigePoints` 阈值计算（PrestigeManager.TIERS）：

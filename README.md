@@ -43,6 +43,7 @@ npm run dev          # 启动 Express 服务器
 | 高风险遗址 | Lv.3 解锁，回报翻倍但赝品率也翻倍 |
 | 文物修复工坊 | Lv.4 解锁，限时修复裂缝赚取 2~5 倍价值 |
 | 学术休假(转生) | Lv.5 解锁，重置进度换取永久加成 |
+| 新手教程 | 8步入门引导，聚光灯高亮 + 逐步操作指引 |
 | 零活打工 | 清理探方、修复陶片两个迷你游戏 |
 | 存档系统 | 自动存档 (localStorage)，断线可续 |
 
@@ -64,6 +65,9 @@ src/
 ├── data/
 │   ├── eraData.js           # 6 个朝代 + 层位数据
 │   └── artifactData.js      # 文物数据（61件）
+├── tutorial/
+│   ├── TutorialManager.js  # 新手引导流程控制
+│   └── TutorialUI.js       # 聚光灯 + 气泡 UI
 └── scenes/
     ├── BootScene.js         # 启动加载
     ├── MainScene.js         # 主界面 (内嵌发掘)

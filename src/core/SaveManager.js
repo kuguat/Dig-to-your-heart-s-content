@@ -47,7 +47,8 @@ class SaveManager {
             upgrades: { ...this.gameState.upgrades },
             prestigeLevel: this.gameState.prestigeLevel,
             prestigeCount: this.gameState.prestigeCount,
-            discoveredArtifactIds: Array.from(this.gameState.discoveredArtifactIds)
+            discoveredArtifactIds: Array.from(this.gameState.discoveredArtifactIds),
+            tutorialFlags: { ...this.gameState.tutorialFlags }
         };
 
         try {
@@ -92,6 +93,9 @@ class SaveManager {
             this.gameState.prestigeLevel = lv;
             this.gameState.prestigeCount = data.prestigeCount || 0;
             this.gameState.discoveredArtifactIds = new Set(data.discoveredArtifactIds || []);
+            if (data.tutorialFlags) {
+                Object.assign(this.gameState.tutorialFlags, data.tutorialFlags);
+            }
 
             console.log('Game loaded successfully');
             return true;
@@ -138,7 +142,8 @@ class SaveManager {
             prestigeCount: this.gameState.prestigeCount,
             prestigeLevel: this.gameState.prestigeLevel,
             totalNationalTreasures: this.gameState.totalNationalTreasures,
-            discoveredArtifactIds: Array.from(this.gameState.discoveredArtifactIds)
+            discoveredArtifactIds: Array.from(this.gameState.discoveredArtifactIds),
+            tutorialFlags: { ...this.gameState.tutorialFlags }
         };
         localStorage.setItem('qianzai_permanent_save', JSON.stringify(data));
     }
@@ -155,6 +160,9 @@ class SaveManager {
             this.gameState.prestigeLevel = data.prestigeLevel || 0;
             this.gameState.totalNationalTreasures = data.totalNationalTreasures || 0;
             this.gameState.discoveredArtifactIds = new Set(data.discoveredArtifactIds || []);
+            if (data.tutorialFlags) {
+                Object.assign(this.gameState.tutorialFlags, data.tutorialFlags);
+            }
             return true;
         } catch (e) {
             return false;

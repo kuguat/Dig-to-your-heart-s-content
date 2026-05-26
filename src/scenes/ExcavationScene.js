@@ -431,7 +431,7 @@ class ExcavationScene extends Phaser.Scene {
 
         // ── 计算挖掘力道 ──
         // 基础刮土量
-        const baseDigPower = 1.5;
+        const baseDigPower = 0.25;
         // 挖掘范围加成（铲宽更大 = 一次刮更多土）
         const rangeBonus = this.gameState.getUpgradeEffect('brushSize');
         // 挖掘速度加成（力道更大 = 一次刮更深）

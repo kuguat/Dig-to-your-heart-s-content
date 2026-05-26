@@ -61,9 +61,9 @@ class PrestigeManager {
         return 0;
     }
 
-    /** 检查是否可以提升声望 */
+    /** 检查是否可以提升声望（JP>=5 且 金钱足够） */
     canPrestige() {
-        return this.gameState.jackpotPointsThisRun >= 5;
+        return this.gameState.jackpotPointsThisRun >= 5 && this.gameState.funds.gte(2500);
     }
 
     /** 是否可以转生（满级后才解锁） */
@@ -73,15 +73,24 @@ class PrestigeManager {
 
     /**
      * 提升声望等级 — Lv.0~4 使用
-     * 累积 JP 到永久池，达到阈值自动升级
+     * 消耗 JP + 金钱（1JP = 500元），累积 JP 到永久池，达到阈值自动升级
      */
-    doAdvance() {
-        const points = this.gameState.jackpotPointsThisRun;
-        if (points < 5) {
-            return { success: false, message: '基金点不足，需要至少5点' };
+    doAdvance(points) {
+        if (!points || points < 5) {
+            return { success: false, message: '至少需要投入5点基金点' };
+        }
+        if (points > this.gameState.jackpotPointsThisRun) {
+            return { success: false, message: `本局基金点不足，当前仅有 ${this.gameState.jackpotPointsThisRun} 点` };
+        }
+
+        const moneyCost = points * 500;
+        if (this.gameState.funds.lt(moneyCost)) {
+            return { success: false, message: `资金不足，需要 ¥${moneyCost}，当前仅有 ¥${this.gameState.funds.toNumber()}` };
         }
 
         const oldLevel = this.calculatePrestigeLevel();
+        this.gameState.funds = this.gameState.funds.minus(moneyCost);
+        this.gameState.jackpotPointsThisRun -= points;
         this.gameState.prestigePoints += points;
         const newLevel = this.calculatePrestigeLevel();
         this.gameState.prestigeLevel = newLevel;
@@ -98,6 +107,7 @@ class PrestigeManager {
         return {
             success: true,
             points: points,
+            moneyCost: moneyCost,
             oldLevel: oldLevel,
             newLevel: newLevel,
             leveledUp: leveledUp,

@@ -51,8 +51,16 @@ class MainScene extends Phaser.Scene {
             // 同步统计面板与实际数据
             this.updateUI();
 
+            // 初始化教程管理器
+            this.tutorialManager = new TutorialManager(this);
+
             // 显示欢迎提示
             this.showWelcomeMessage();
+
+            // 启动入门教程（延迟确保 UI 渲染完毕）
+            if (this.tutorialManager.shouldStartBasic()) {
+                this.time.delayedCall(600, () => this.tutorialManager.startBasic());
+            }
 
             // 挖掘相关状态
             this.isDigging = false;
@@ -572,6 +580,8 @@ class MainScene extends Phaser.Scene {
             this.showMessage(`清理探方冷却中... (${Math.ceil(this.laborCleanCooldown)}秒)`, 'error');
             return;
         }
+        // 教程：首次清理探方
+        if (this.tutorialManager) this.tutorialManager.onOddjobClean();
         this.startCleanMinigame();
     }
 
@@ -588,6 +598,8 @@ class MainScene extends Phaser.Scene {
             this.showMessage('修复陶片需要声望 Lv.1 以上', 'error');
             return;
         }
+        // 教程：首次修复陶片
+        if (this.tutorialManager) this.tutorialManager.onOddjobRepair();
         this.startPotteryMinigame();
     }
 
@@ -1298,6 +1310,8 @@ class MainScene extends Phaser.Scene {
         this.refreshSiteButtons();
         this.drawSoilPreview();
         this.showMessage(`已切换至${EraData[eraId].name}，发掘层位已更新`);
+        // 教程：首次切换朝代
+        if (this.tutorialManager) this.tutorialManager.onDynastySwitch();
     }
 
     drawSoilPreview() {
@@ -1397,6 +1411,11 @@ class MainScene extends Phaser.Scene {
         if (this.isLaboring) {
             this.showMessage('正在做零活，请完成后再发掘', 'error');
             return;
+        }
+
+        // 教程步骤4：玩家点击了发掘区
+        if (this.tutorialManager && this.tutorialManager.currentBasicStep === 4) {
+            this.tutorialManager.onExcavationClicked();
         }
 
         if (!this.economy.canAfford(cost)) {
@@ -1507,6 +1526,13 @@ class MainScene extends Phaser.Scene {
         this.createProgressUI();
 
         this.showMessage(`开始发掘 ${eraData.name} · ${site.name}`);
+
+        // 教程步骤5：刮土教学
+        if (this.tutorialManager && this.tutorialManager.currentBasicStep === 4) {
+            this.time.delayedCall(400, () => {
+                this.tutorialManager.showStep5_excavateGuide(this);
+            });
+        }
 
         // 入场闪光
         this.cameras.main.flash(200, 28, 20, 8, true);
@@ -1741,7 +1767,7 @@ class MainScene extends Phaser.Scene {
             this.cameras.main.shake(50, 0.003);
         }
 
-        const baseDigPower = 1.5;
+        const baseDigPower = 0.25;
         const rangeBonus = this.state.getUpgradeEffect('brushSize');
         const speedBonus = this.state.getUpgradeEffect('excavationSpeed');
         const hardnessMod = 1.0 / (1.0 + this.currentLayer * 0.3);
@@ -1976,15 +2002,17 @@ class MainScene extends Phaser.Scene {
             if (!this.artifactIcon) {
                 const iconKey = this.getArtifactIconKey(this.currentArtifact);
                 if (iconKey) {
-                    this.artifactIcon = this.add.image(cx, cy - 15, iconKey)
-                        .setDisplaySize(36, 36)
+                    this.artifactIcon = this.add.image(cx, cy, iconKey)
+                        .setDisplaySize(52, 52)
                         .setAlpha(0)
-                        .setScale(0.3)
                         .setDepth(13);
-                    // 旋转浮出 + 弹性回弹
+                    // 保存正确的显示缩放比（36 / 纹理原始大小）
+                    const iconScale = this.artifactIcon.scaleX;
+                    this.artifactIcon.setScale(iconScale * 0.3);
+                    // 旋转浮出 + 弹性回弹（最终锁定 36×36）
                     this.tweens.add({
                         targets: this.artifactIcon,
-                        scaleX: 1, scaleY: 1, alpha: 1,
+                        scaleX: iconScale, scaleY: iconScale, alpha: 1,
                         angle: { from: -15, to: 0 },
                         duration: 500,
                         ease: 'Back.easeOut'
@@ -2381,6 +2409,13 @@ class MainScene extends Phaser.Scene {
         this.state.discoveredArtifactIds.add(this.currentArtifact.id);
 
         this.showAppraisalResult(result, isAuthentic, condition);
+
+        // 教程步骤6：鉴定结果，传入当前场景引用
+        if (this.tutorialManager && window._tutorialPendingStep === 6) {
+            this.time.delayedCall(300, () => {
+                this.tutorialManager.showStep6_appraisal(this);
+            });
+        }
     }
 
     showAppraisalResult(result, isAuthentic, condition) {
@@ -2509,6 +2544,7 @@ class MainScene extends Phaser.Scene {
                 this.economy.addPrestigePoints(jp);
                 this.showToastPopup(`感谢奉献！获得 ${jp} 基金点`);
                 this.state.save();
+                if (this.tutorialManager) this.tutorialManager.onAppraisalContinue();
                 modal.destroy();
                 this.time.delayedCall(1200, () => this.cleanupExcavation());
             });
@@ -2525,6 +2561,7 @@ class MainScene extends Phaser.Scene {
                 this.economy.addFunds(bonus);
                 this.showToastPopup(`拍卖成功！额外获得 ¥${bonus.toString()}`);
                 this.state.save();
+                if (this.tutorialManager) this.tutorialManager.onAppraisalContinue();
                 modal.destroy();
                 this.time.delayedCall(1200, () => this.cleanupExcavation());
             });
@@ -2540,6 +2577,7 @@ class MainScene extends Phaser.Scene {
 
             continueBtn.on('pointerdown', () => {
                 this.state.save();
+                if (this.tutorialManager) this.tutorialManager.onAppraisalContinue();
                 modal.destroy();
                 this.cleanupExcavation();
             });
@@ -2653,6 +2691,8 @@ class MainScene extends Phaser.Scene {
         this.showMessage(`${upgradeId} 升级到 Lv.${this.state.upgrades[upgradeId]}！`, 'success');
         this.updateUI();
         this.state.save();
+        // 教程：玩家完成了升级
+        if (this.tutorialManager) this.tutorialManager.onUpgradeDone();
     }
 
     doPrestige() {
@@ -2675,24 +2715,141 @@ class MainScene extends Phaser.Scene {
                 this.showMessage(result.message, 'success');
             }
         } else {
-            // Lv.0~4 提升声望等级
-            const result = this.prestigeManager.doAdvance();
-            if (result.success) {
-                if (this.audio) this.audio.prestige();
-                if (result.leveledUp) {
-                    this.showPrestigeResult(result);
-                    // 晋升后检查是否需要新建依赖声望等级的功能
-                    if (this.state.prestigeLevel >= 3 && !this.techArchaeologyLabel) {
-                        this.createTechArchaeologyToggle(this.config.excavation);
-                    }
-                    if (this.state.prestigeLevel >= 4 && !this.workshopBtn) {
-                        this.createRepairWorkshopBtn();
-                    }
-                }
-                this.updateEraButtons();
-                this.updateUI();
-                this.showMessage(result.message, 'success');
+            // Lv.0~4 提升声望等级 — 弹出 JP 数量选择
+            this.showAdvanceDialog();
+        }
+    }
+
+    /** 声望提升 JP 数量选择弹窗 */
+    showAdvanceDialog() {
+        const jpAvailable = this.state.jackpotPointsThisRun;
+        const maxAffordable = Math.floor(this.state.funds.toNumber() / 500);
+        const maxJP = Math.min(jpAvailable, maxAffordable);
+
+        if (maxJP < 5) {
+            if (jpAvailable < 5) {
+                this.showMessage('本局基金点不足5点，无法操作', 'error');
+            } else {
+                this.showMessage('资金不足，至少需要 ¥2,500（5JP × 500元/点）', 'error');
             }
+            return;
+        }
+
+        let selectedJP = Math.min(5, maxJP);
+        const modal = this.add.container(0, 0).setDepth(100);
+
+        const overlay = this.add.graphics();
+        overlay.fillStyle(0x000000, 0.7);
+        overlay.fillRect(0, 0, this.config.width, this.config.height);
+        modal.add(overlay);
+
+        const panelW = 380, panelH = 260;
+        const panel = this.add.graphics();
+        panel.fillStyle(0x2c1810, 1);
+        panel.fillRoundedRect(0, 0, panelW, panelH, 20);
+        panel.lineStyle(3, 0xf4d03f, 1);
+        panel.strokeRoundedRect(0, 0, panelW, panelH, 20);
+        modal.add(panel);
+
+        modal.add(this.add.text(200, 40, '⭐ 投入基金点', {
+            fontSize: '24px', fontFamily: GameConfig.typography.fontFamily, color: '#f4d03f', fontStyle: 'bold'
+        }).setOrigin(0.5));
+
+        modal.add(this.add.text(200, 80, `持有: ${jpAvailable} JP  |  1 JP = ¥500`, {
+            fontSize: '14px', fontFamily: GameConfig.typography.fontFamily, color: '#8b7355'
+        }).setOrigin(0.5));
+
+        // JP 数量显示
+        const jpText = this.add.text(200, 120, `${selectedJP} JP`, {
+            fontSize: '32px', fontFamily: GameConfig.typography.fontFamily, color: '#9b59b6', fontStyle: 'bold'
+        }).setOrigin(0.5);
+        modal.add(jpText);
+
+        const costText = this.add.text(200, 155, `消耗 ¥${selectedJP * 500}`, {
+            fontSize: '16px', fontFamily: GameConfig.typography.fontFamily, color: '#e67e22'
+        }).setOrigin(0.5);
+        modal.add(costText);
+
+        // 减号按钮
+        const minusBtn = this.add.text(120, 120, '−', {
+            fontSize: '28px', fontFamily: GameConfig.typography.fontFamily, color: '#f5e6d3',
+            backgroundColor: '#5a3020', padding: { x: 12, y: 2 }
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        this.addButtonEffects(minusBtn);
+        minusBtn.on('pointerdown', () => {
+            if (this.audio) this.audio.click();
+            if (selectedJP > 5) {
+                selectedJP = Math.max(5, selectedJP - 5);
+                jpText.setText(`${selectedJP} JP`);
+                costText.setText(`消耗 ¥${selectedJP * 500}`);
+            }
+        });
+        modal.add(minusBtn);
+
+        // 加号按钮
+        const plusBtn = this.add.text(280, 120, '+', {
+            fontSize: '28px', fontFamily: GameConfig.typography.fontFamily, color: '#f5e6d3',
+            backgroundColor: '#5a3020', padding: { x: 12, y: 2 }
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        this.addButtonEffects(plusBtn);
+        plusBtn.on('pointerdown', () => {
+            if (this.audio) this.audio.click();
+            if (selectedJP < maxJP) {
+                selectedJP = Math.min(maxJP, selectedJP + 5);
+                jpText.setText(`${selectedJP} JP`);
+                costText.setText(`消耗 ¥${selectedJP * 500}`);
+            }
+        });
+        modal.add(plusBtn);
+
+        // 确认按钮
+        const confirmBtn = this.add.text(140, 210, '确认投入', {
+            fontSize: '18px', fontFamily: GameConfig.typography.fontFamily, color: '#f5e6d3',
+            backgroundColor: '#6b3a2a', padding: { x: 24, y: 8 }
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        this.addButtonEffects(confirmBtn);
+        confirmBtn.on('pointerdown', () => {
+            if (this.audio) this.audio.click();
+            modal.destroy();
+            this.doAdvanceWithPoints(selectedJP);
+        });
+        modal.add(confirmBtn);
+
+        // 取消按钮
+        const cancelBtn = this.add.text(260, 210, '取消', {
+            fontSize: '18px', fontFamily: GameConfig.typography.fontFamily, color: '#8b7355',
+            backgroundColor: '#3d2817', padding: { x: 24, y: 8 }
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        this.addButtonEffects(cancelBtn);
+        cancelBtn.on('pointerdown', () => {
+            if (this.audio) this.audio.click();
+            modal.destroy();
+        });
+        modal.add(cancelBtn);
+    }
+
+    /** 执行声望提升（指定 JP 数量） */
+    doAdvanceWithPoints(points) {
+        const result = this.prestigeManager.doAdvance(points);
+        if (result.success) {
+            if (this.audio) this.audio.prestige();
+            if (result.leveledUp) {
+                this.showPrestigeResult(result);
+                if (this.state.prestigeLevel >= 3 && !this.techArchaeologyLabel) {
+                    this.createTechArchaeologyToggle(this.config.excavation);
+                }
+                if (this.state.prestigeLevel >= 4 && !this.workshopBtn) {
+                    this.createRepairWorkshopBtn();
+                }
+                if (this.tutorialManager) {
+                    this.time.delayedCall(500, () => {
+                        this.tutorialManager.onPrestigeLevelUp(this.state.prestigeLevel);
+                    });
+                }
+            }
+            this.updateEraButtons();
+            this.updateUI();
+            this.showMessage(result.message, 'success');
         }
     }
 

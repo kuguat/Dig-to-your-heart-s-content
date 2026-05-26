@@ -51,6 +51,19 @@ class GameState {
 
         // 转生次数
         this.prestigeCount = 0;
+
+        // 教程标记（永久保留，转生不重置）
+        this.tutorialFlags = {
+            basic_complete: false,
+            tier2_lv1: false,
+            tier2_lv2: false,
+            tier2_lv3: false,
+            tier2_lv4: false,
+            tier2_lv5: false,
+            tier2_dynasty_switch: false,
+            oddjob_clean: false,
+            oddjob_repair: false
+        };
     }
 
     // 复制状态（用于存档）
@@ -141,7 +154,8 @@ class GameState {
             upgrades: this.upgrades,
             prestigeLevel: this.prestigeLevel,
             prestigeCount: this.prestigeCount,
-            discoveredArtifactIds: Array.from(this.discoveredArtifactIds)
+            discoveredArtifactIds: Array.from(this.discoveredArtifactIds),
+            tutorialFlags: { ...this.tutorialFlags }
         };
         localStorage.setItem('qianzai_game_save', JSON.stringify(data));
     }
@@ -177,6 +191,9 @@ class GameState {
             this.prestigeLevel = lv;
             this.prestigeCount = data.prestigeCount || 0;
             this.discoveredArtifactIds = new Set(data.discoveredArtifactIds || []);
+            if (data.tutorialFlags) {
+                Object.assign(this.tutorialFlags, data.tutorialFlags);
+            }
             return true;
         } catch (e) {
             console.error('Failed to load save:', e);
