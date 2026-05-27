@@ -4,11 +4,8 @@
 网页端文化考古模拟游戏。从新石器时代的陶片开始，发掘中华五千年文明的失落文物。核心玩法：刮土揭示文物 → 鉴定真伪 → 收益升级 → 提升声望解锁新机制 → 最终转生开启永久加成。
 
 ## 运行方式
-```bash
-npm install          # 仅首次
-npm run dev          # 启动 Express 服务器
-```
-浏览器打开 **http://localhost:3000**
+
+浏览器打开 **https://kuguat.github.io/Dig-to-your-heart-s-content/**
 
 ## 技术栈
 - **引擎**: Phaser 3.70 (CDN)
@@ -77,18 +74,4 @@ src/
     ├── MuseumScene.js       # 博物馆（图鉴+收藏奖励）
     ├── PrestigeScene.js     # 声望六级阶梯界面
     └── RepairWorkshopScene.js # 文物修复工坊
-```
-
-## 开发者测试
-F12 打开浏览器控制台，粘贴以下命令：
-
-```js
-// 切换朝代 (neolithic / shangzhou / qinhan / tang / songyuan / mingqing)
-gameState.currentEra='tang'; game.scene.start('MainScene');
-
-// 满声望 (Lv.5，全内容解锁)
-gameState.prestigePoints=55000; gameState.prestigeLevel=5; game.scene.start('MainScene');
-
-// 无限钱
-gameState.funds=new BigNumber(99999999);
 ```
