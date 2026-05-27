@@ -59,6 +59,17 @@ class BootScene extends Phaser.Scene {
             window.prestigeManager = new PrestigeManager(window.gameState);
             console.log('BootScene: PrestigeManager 初始化完成');
 
+            // IOA 安全体系初始化
+            window.dataValidator = new DataValidator();
+            window.anomalyDetector = new AnomalyDetector(window.gameState);
+            window.hasAnonymizer = new HaSAnonymizer();
+            console.log('BootScene: 安全体系初始化完成 (IOA + HaS-Anonymizer)');
+
+            // 将安全模块注入 SaveManager
+            window.saveManager.dataValidator = window.dataValidator;
+            window.saveManager.anomalyDetector = window.anomalyDetector;
+            window.saveManager.hasAnonymizer = window.hasAnonymizer;
+
             // 初始化音效系统
             try {
                 window.audioManager = new AudioManager();

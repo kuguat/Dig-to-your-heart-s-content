@@ -431,7 +431,7 @@ class ExcavationScene extends Phaser.Scene {
 
         // ── 计算挖掘力道 ──
         // 基础刮土量
-        const baseDigPower = 0.25;
+        const baseDigPower = 0.5;
         // 挖掘范围加成（铲宽更大 = 一次刮更多土）
         const rangeBonus = this.gameState.getUpgradeEffect('brushSize');
         // 挖掘速度加成（力道更大 = 一次刮更深）
@@ -710,6 +710,12 @@ class ExcavationScene extends Phaser.Scene {
         else if (conditionRoll < 0.7) condition = 'complete';
         else if (conditionRoll < 0.9) condition = 'excellent';
         else condition = 'pristine';
+
+        // IOA安全：出售频率检测 + 资金完整性检查
+        if (window.anomalyDetector) {
+            window.anomalyDetector.traceEvent('sell');
+            window.anomalyDetector.checkFundsIntegrity();
+        }
 
         const result = this.economy.processArtifact(
             this.currentArtifact, isAuthentic, condition,

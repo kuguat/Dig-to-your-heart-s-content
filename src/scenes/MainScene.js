@@ -14,6 +14,8 @@ class MainScene extends Phaser.Scene {
             this.saveManager = window.saveManager;
             this.prestigeManager = window.prestigeManager;
             this.audio = window.audioManager;
+            this.anomalyDetector = window.anomalyDetector;
+            this.hasAnonymizer = window.hasAnonymizer;
 
             // 安全校验：确保状态对象完整
             if (!this.state || !this.economy || !this.saveManager || !this.prestigeManager) {
@@ -1406,6 +1408,15 @@ class MainScene extends Phaser.Scene {
     // ══════════════════════════════════════════
 
     startExcavation(site) {
+        // IOA安全：频率限制检测
+        if (this.anomalyDetector) {
+            const check = this.anomalyDetector.traceEvent('excavate');
+            if (!check.allowed) {
+                this.showMessage(check.reason, 'error');
+                return;
+            }
+        }
+
         const cost = new BigNumber(site.cost);
 
         if (this.isLaboring) {
@@ -2404,6 +2415,12 @@ class MainScene extends Phaser.Scene {
         else if (conditionRoll < 0.9) condition = 'excellent';
         else condition = 'pristine';
 
+        // IOA安全：出售频率检测 + 资金完整性检查
+        if (this.anomalyDetector) {
+            this.anomalyDetector.traceEvent('sell');
+            this.anomalyDetector.checkFundsIntegrity();
+        }
+
         const result = this.economy.processArtifact(this.currentArtifact, isAuthentic, condition, this.state.currentSite ? this.state.currentSite.cost : 0);
         this.state.totalArtifactsFound++;
         this.state.discoveredArtifactIds.add(this.currentArtifact.id);
@@ -2672,6 +2689,15 @@ class MainScene extends Phaser.Scene {
     // ══════════════════════════════════════════
 
     purchaseUpgrade(upgradeId) {
+        // IOA安全：升级频率检测
+        if (this.anomalyDetector) {
+            const check = this.anomalyDetector.traceEvent('upgrade');
+            if (!check.allowed) {
+                this.showMessage(check.reason, 'error');
+                return;
+            }
+        }
+
         const cost = this.state.getUpgradeCost(upgradeId);
         const level = this.state.upgrades[upgradeId];
         const maxLevel = this.state.getMaxUpgradeLevel(upgradeId);
@@ -2830,6 +2856,19 @@ class MainScene extends Phaser.Scene {
 
     /** 执行声望提升（指定 JP 数量） */
     doAdvanceWithPoints(points) {
+        // IOA安全：声望频率检测 + JP 完整性校验
+        if (this.anomalyDetector) {
+            const check = this.anomalyDetector.traceEvent('prestige');
+            if (!check.allowed) {
+                this.showMessage(check.reason, 'error');
+                return;
+            }
+            const jpCheck = this.anomalyDetector.checkPrestigeIntegrity(points);
+            if (!jpCheck.ok) {
+                console.warn('[Security] JP 异常:', jpCheck.reason);
+            }
+        }
+
         const result = this.prestigeManager.doAdvance(points);
         if (result.success) {
             if (this.audio) this.audio.prestige();

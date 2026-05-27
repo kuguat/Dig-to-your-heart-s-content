@@ -31,8 +31,9 @@ BootScene → MainScene ⇄ ExcavationScene / MuseumScene / PrestigeScene / Repa
 | 4 | 资深考古学家 | 10,000 | 宋元 | 🔧 文物修复工坊 |
 | 5 | 首席考古学家 | 50,000 | 明清 | 🔄 学术休假(转生永久加成) |
 
-- **Lv.0~4**: 通过"提升声望"存入 JP 升级，重置局内进度但保留图鉴
+- **Lv.0~4**: "提升声望"弹窗自行选择投入 JP 数量（下限5），系统按 1JP=¥500 计算消耗，JP+金钱双重扣除后累积永久声望；重置局内进度但保留图鉴
 - **Lv.5**: 解锁"学术休假"（转生），重置全部进度换取永久加成
+- 门槛校验: `canPrestige()` 要求 JP≥5 且资金≥¥2,500（5×500）
 - 诱惑预览：声望技能树只显示当前等级+后2级，再往后显示"???"
 
 ## 核心对象（window 全局）
@@ -47,7 +48,7 @@ BootScene → MainScene ⇄ ExcavationScene / MuseumScene / PrestigeScene / Repa
 |----|------|----------|---------|----------|
 | luck | 勘探运气 | +3% 真品率 | 50 | ¥1,000 |
 | brushSize | 挖掘范围 | +4% 铲宽 | 50 | ¥2,000 |
-| excavationSpeed | 挖掘速度 | +6% 力道 | 50 | ¥1,500 |
+| excavationSpeed | 挖掘速度 | +6% 力道 (baseDigPower=0.25) | 50 | ¥1,500 |
 | artifactValue | 文物倍率 | +12% 价值 | 50 | ¥3,000 |
 | appraisalAccuracy | 鉴定精度 | +5% 精度 | 50 | ¥2,500 |
 

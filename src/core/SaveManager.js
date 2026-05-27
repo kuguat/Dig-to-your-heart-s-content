@@ -7,6 +7,9 @@ class SaveManager {
         this.saveKey = 'qianzai_game_save';
         this.autoSaveInterval = 30000; // 30秒自动保存
         this.autoSaveTimer = null;
+        this.dataValidator = window.dataValidator || new DataValidator();
+        this.anomalyDetector = window.anomalyDetector || null;
+        this.hasAnonymizer = window.hasAnonymizer || new HaSAnonymizer();
     }
 
     // 开始自动存档
@@ -51,8 +54,11 @@ class SaveManager {
             tutorialFlags: { ...this.gameState.tutorialFlags }
         };
 
+        // IOA安全：附加校验码
+        const sealed = this.dataValidator.seal(saveData);
+
         try {
-            localStorage.setItem(this.saveKey, JSON.stringify(saveData));
+            localStorage.setItem(this.saveKey, JSON.stringify(sealed));
             return true;
         } catch (e) {
             console.error('Save failed:', e);
@@ -66,7 +72,21 @@ class SaveManager {
         if (!savedData) return false;
 
         try {
-            const data = JSON.parse(savedData);
+            let data = JSON.parse(savedData);
+
+            // IOA安全：数据交互校验
+            const validation = this.dataValidator.validate(data);
+            if (!validation.valid) {
+                console.warn('[SaveManager] 存档校验失败:', validation.reason);
+                if (validation.tampered) {
+                    this.dataValidator.logAlert('SAVE_LOAD', '检测到存档异常: ' + validation.reason);
+                }
+            }
+            // 清理受损字段
+            data = this.dataValidator.sanitize(data);
+            if (validation.tampered) {
+                console.warn('[SaveManager] 已自动修复受损存档');
+            }
 
             // 处理旧存档格式：funds 可能是数字或 BigNumber 格式
             if (typeof data.funds === 'number') {
@@ -95,6 +115,14 @@ class SaveManager {
             this.gameState.discoveredArtifactIds = new Set(data.discoveredArtifactIds || []);
             if (data.tutorialFlags) {
                 Object.assign(this.gameState.tutorialFlags, data.tutorialFlags);
+            }
+
+            // IOA安全：异常行为全量扫描
+            if (this.anomalyDetector) {
+                const issues = this.anomalyDetector.fullScan();
+                if (issues.length > 0) {
+                    console.warn('[SaveManager] 完整性扫描发现 ' + issues.length + ' 个问题:', issues);
+                }
             }
 
             console.log('Game loaded successfully');
