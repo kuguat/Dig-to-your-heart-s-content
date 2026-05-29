@@ -24,7 +24,7 @@
 | 4 | 资深考古学家 | 宋元 | 🔧 文物修复工坊 |
 | 5 | 首席考古学家 | 明清 | 🔄 学术休假(转生永久加成) |
 
-> **升级消耗**：1JP = ¥500，玩家自行选择投入 JP 数量（最少 5 JP = ¥2,500），JP+金钱双重扣除后累积永久声望
+> **升级消耗**：1JP = ¥50,000，玩家自行选择投入 JP 数量（最少 5 JP = ¥250,000），JP+金钱双重扣除后累积总 JP；总 JP 达阈值自动提升声望等级
 >
 > 玩家只能看到当前等级 + 往后2级的解锁内容
 
@@ -61,6 +61,10 @@ src/
 │   ├── PrestigeManager.js   # 声望六级阶 + 转生
 │   ├── SaveManager.js       # 自动存档 (30s 间隔)
 │   └── AudioManager.js      # 音效管理
+├── security/
+│   ├── AnomalyDetector.js   # 异常行为检测
+│   ├── DataValidator.js     # 存档校验
+│   └── HaSAnonymizer.js     # 数据匿名化
 ├── data/
 │   ├── eraData.js           # 6 个朝代 + 层位数据
 │   └── artifactData.js      # 文物数据（61件）
@@ -72,6 +76,27 @@ src/
     ├── MainScene.js         # 主界面 (内嵌发掘)
     ├── ExcavationScene.js   # 发掘场景
     ├── MuseumScene.js       # 博物馆（图鉴+收藏奖励）
-    ├── PrestigeScene.js     # 声望六级阶梯界面
     └── RepairWorkshopScene.js # 文物修复工坊
+```
+
+## 开发者测试
+F12 打开浏览器控制台，粘贴以下命令：
+
+```js
+// 切换朝代 (neolithic / shangzhou / qinhan / tang / songyuan / mingqing)
+window.gameState.currentEra='tang'; game.scene.start('MainScene');
+
+// 满声望 (Lv.5，全内容解锁)
+window.gameState.prestigePoints=55000; window.gameState.prestigeLevel=5; game.scene.start('MainScene');
+
+// 无限钱
+window.gameState.funds=new BigNumber(1e15);
+
+// 本局 JP 100
+window.gameState.jackpotPointsThisRun = 100;
+
+// 清除存档
+localStorage.removeItem('qianzai_game_save');
+localStorage.removeItem('qianzai_permanent_save');
+location.reload();
 ```

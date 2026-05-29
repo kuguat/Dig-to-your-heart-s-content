@@ -2727,36 +2727,172 @@ class MainScene extends Phaser.Scene {
             return;
         }
 
-        const level = this.prestigeManager.calculatePrestigeLevel();
-        if (level >= 5) {
-            // Lv.5 学术休假（转生）
-            const result = this.prestigeManager.doPrestige();
-            if (result.success) {
-                if (this.audio) this.audio.prestige();
-                this.showPrestigeResult(result);
-                this.saveManager.savePermanent();
-                this.refreshSiteButtons();
-                this.drawSoilPreview();
-                this.updateUI();
-                this.showMessage(result.message, 'success');
-            }
-        } else {
-            // Lv.0~4 提升声望等级 — 弹出 JP 数量选择
-            this.showAdvanceDialog();
-        }
+        // 弹出选择器，自由选择投入的 JP 数量
+        this.showPrestigeDialog();
     }
 
-    /** 声望提升 JP 数量选择弹窗 */
-    showAdvanceDialog() {
+    /** 转生 JP 数量选择弹窗 */
+    showPrestigeDialog() {
         const jpAvailable = this.state.jackpotPointsThisRun;
-        const maxAffordable = Math.floor(this.state.funds.toNumber() / 500);
+        const maxAffordable = Math.floor(this.state.funds.toNumber() / 50000);
         const maxJP = Math.min(jpAvailable, maxAffordable);
 
         if (maxJP < 5) {
             if (jpAvailable < 5) {
                 this.showMessage('本局基金点不足5点，无法操作', 'error');
             } else {
-                this.showMessage('资金不足，至少需要 ¥2,500（5JP × 500元/点）', 'error');
+                this.showMessage('资金不足，至少需要 ¥250,000（5JP × 50,000元/点）', 'error');
+            }
+            return;
+        }
+
+        let selectedJP = Math.min(5, maxJP);
+        const modal = this.add.container(0, 0).setDepth(100);
+
+        const overlay = this.add.graphics();
+        overlay.fillStyle(0x000000, 0.7);
+        overlay.fillRect(0, 0, this.config.width, this.config.height);
+        overlay.setInteractive();
+        modal.add(overlay);
+
+        const panelW = 380, panelH = 260;
+        const panel = this.add.graphics();
+        panel.fillStyle(0x2c1810, 1);
+        panel.fillRoundedRect(0, 0, panelW, panelH, 20);
+        panel.lineStyle(3, 0x8e44ad, 1);
+        panel.strokeRoundedRect(0, 0, panelW, panelH, 20);
+        modal.add(panel);
+
+        modal.add(this.add.text(200, 40, '🔮 学术休假（转生）', {
+            fontSize: '22px', fontFamily: GameConfig.typography.fontFamily, color: '#d4a574', fontStyle: 'bold'
+        }).setOrigin(0.5));
+
+        modal.add(this.add.text(200, 80, `持有: ${jpAvailable} JP  |  1 JP = ¥50,000`, {
+            fontSize: '13px', fontFamily: GameConfig.typography.fontFamily, color: '#8b7355'
+        }).setOrigin(0.5));
+
+        // JP 数量显示
+        const jpText = this.add.text(200, 120, `${selectedJP} JP`, {
+            fontSize: '32px', fontFamily: GameConfig.typography.fontFamily, color: '#9b59b6', fontStyle: 'bold'
+        }).setOrigin(0.5);
+        modal.add(jpText);
+
+        const costText = this.add.text(200, 155, `消耗 ¥${selectedJP * 50000}`, {
+            fontSize: '16px', fontFamily: GameConfig.typography.fontFamily, color: '#e67e22'
+        }).setOrigin(0.5);
+        modal.add(costText);
+
+        // 减号按钮
+        const minusBtn = this.add.text(120, 120, '−', {
+            fontSize: '28px', fontFamily: GameConfig.typography.fontFamily, color: '#f5e6d3',
+            backgroundColor: '#5a3020', padding: { x: 12, y: 2 }
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        this.addButtonEffects(minusBtn);
+        minusBtn.on('pointerdown', () => {
+            if (this.audio) this.audio.click();
+            if (selectedJP > 5) {
+                selectedJP = Math.max(5, selectedJP - 5);
+                jpText.setText(`${selectedJP} JP`);
+                costText.setText(`消耗 ¥${selectedJP * 50000}`);
+            }
+        });
+        modal.add(minusBtn);
+
+        // 加号按钮
+        const plusBtn = this.add.text(280, 120, '+', {
+            fontSize: '28px', fontFamily: GameConfig.typography.fontFamily, color: '#f5e6d3',
+            backgroundColor: '#5a3020', padding: { x: 12, y: 2 }
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        this.addButtonEffects(plusBtn);
+        plusBtn.on('pointerdown', () => {
+            if (this.audio) this.audio.click();
+            if (selectedJP < maxJP) {
+                selectedJP = Math.min(maxJP, selectedJP + 5);
+                jpText.setText(`${selectedJP} JP`);
+                costText.setText(`消耗 ¥${selectedJP * 50000}`);
+            }
+        });
+        modal.add(plusBtn);
+
+        // 确认按钮
+        const confirmBtn = this.add.text(140, 210, '确认转生', {
+            fontSize: '18px', fontFamily: GameConfig.typography.fontFamily, color: '#f5e6d3',
+            backgroundColor: '#8e44ad', padding: { x: 24, y: 8 }
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        this.addButtonEffects(confirmBtn);
+        confirmBtn.on('pointerdown', () => {
+            if (this.audio) this.audio.click();
+            modal.destroy();
+            this.doPrestigeWithPoints(selectedJP);
+        });
+        modal.add(confirmBtn);
+
+        // 取消按钮
+        const cancelBtn = this.add.text(260, 210, '取消', {
+            fontSize: '18px', fontFamily: GameConfig.typography.fontFamily, color: '#8b7355',
+            backgroundColor: '#3d2817', padding: { x: 24, y: 8 }
+        }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+        this.addButtonEffects(cancelBtn);
+        cancelBtn.on('pointerdown', () => {
+            if (this.audio) this.audio.click();
+            modal.destroy();
+        });
+        modal.add(cancelBtn);
+    }
+
+    /** 执行转生（指定 JP 数量） */
+    doPrestigeWithPoints(points) {
+        // IOA安全：转生频率检测
+        if (this.anomalyDetector) {
+            const check = this.anomalyDetector.traceEvent('prestige');
+            if (!check.allowed) {
+                this.showMessage(check.reason, 'error');
+                return;
+            }
+        }
+
+        const result = this.prestigeManager.doPrestige(points);
+        if (result.success) {
+            if (this.audio) this.audio.prestige();
+            // 等级提升时显示奖励弹窗，否则只显示简单弹窗
+            if (result.leveledUp) {
+                this.showPrestigeResult(result);
+                // 等级解锁逻辑
+                if (this.state.prestigeLevel >= 3 && !this.techArchaeologyLabel) {
+                    this.createTechArchaeologyToggle(this.config.excavation);
+                }
+                if (this.state.prestigeLevel >= 4 && !this.workshopBtn) {
+                    this.createRepairWorkshopBtn();
+                }
+                if (this.tutorialManager) {
+                    this.time.delayedCall(500, () => {
+                        this.tutorialManager.onPrestigeLevelUp(this.state.prestigeLevel);
+                    });
+                }
+            } else {
+                this.showPrestigeResult(result);
+            }
+            this.saveManager.savePermanent();
+            this.refreshSiteButtons();
+            this.drawSoilPreview();
+            this.updateUI();
+            this.showMessage(result.message, 'success');
+        } else {
+            this.showMessage(result.message, 'error');
+        }
+    }
+
+    /** 声望提升 JP 数量选择弹窗 */
+    showAdvanceDialog() {
+        const jpAvailable = this.state.jackpotPointsThisRun;
+        const maxAffordable = Math.floor(this.state.funds.toNumber() / 50000);
+        const maxJP = Math.min(jpAvailable, maxAffordable);
+
+        if (maxJP < 5) {
+            if (jpAvailable < 5) {
+                this.showMessage('本局基金点不足5点，无法操作', 'error');
+            } else {
+                this.showMessage('资金不足，至少需要 ¥250,000（5JP × 50,000元/点）', 'error');
             }
             return;
         }
@@ -2781,7 +2917,7 @@ class MainScene extends Phaser.Scene {
             fontSize: '24px', fontFamily: GameConfig.typography.fontFamily, color: '#f4d03f', fontStyle: 'bold'
         }).setOrigin(0.5));
 
-        modal.add(this.add.text(200, 80, `持有: ${jpAvailable} JP  |  1 JP = ¥500`, {
+        modal.add(this.add.text(200, 80, `持有: ${jpAvailable} JP  |  1 JP = ¥50,000`, {
             fontSize: '14px', fontFamily: GameConfig.typography.fontFamily, color: '#8b7355'
         }).setOrigin(0.5));
 
@@ -2791,7 +2927,7 @@ class MainScene extends Phaser.Scene {
         }).setOrigin(0.5);
         modal.add(jpText);
 
-        const costText = this.add.text(200, 155, `消耗 ¥${selectedJP * 500}`, {
+        const costText = this.add.text(200, 155, `消耗 ¥${selectedJP * 50000}`, {
             fontSize: '16px', fontFamily: GameConfig.typography.fontFamily, color: '#e67e22'
         }).setOrigin(0.5);
         modal.add(costText);
@@ -2807,7 +2943,7 @@ class MainScene extends Phaser.Scene {
             if (selectedJP > 5) {
                 selectedJP = Math.max(5, selectedJP - 5);
                 jpText.setText(`${selectedJP} JP`);
-                costText.setText(`消耗 ¥${selectedJP * 500}`);
+                costText.setText(`消耗 ¥${selectedJP * 50000}`);
             }
         });
         modal.add(minusBtn);
@@ -2823,7 +2959,7 @@ class MainScene extends Phaser.Scene {
             if (selectedJP < maxJP) {
                 selectedJP = Math.min(maxJP, selectedJP + 5);
                 jpText.setText(`${selectedJP} JP`);
-                costText.setText(`消耗 ¥${selectedJP * 500}`);
+                costText.setText(`消耗 ¥${selectedJP * 50000}`);
             }
         });
         modal.add(plusBtn);
@@ -2900,8 +3036,9 @@ class MainScene extends Phaser.Scene {
         overlay.fillRect(0, 0, this.config.width, this.config.height);
         modal.add(overlay);
 
-        const isRebirth = result.reward && typeof result.reward.name === 'string';
-        const panelH = isRebirth ? 300 : 220 + (result.reward && result.reward.unlocks ? result.reward.unlocks.length * 26 : 0);
+        // 转生只显示获得JP，声望提升才显示奖励
+        const isRebirth = !result.reward;
+        const panelH = isRebirth ? 220 : 220 + (result.reward && result.reward.unlocks ? result.reward.unlocks.length * 26 : 0);
 
         const panel = this.add.graphics();
         panel.fillStyle(0x2c1810, 1);
@@ -2919,22 +3056,13 @@ class MainScene extends Phaser.Scene {
             fontSize: '20px', fontFamily: GameConfig.typography.fontFamily, color: '#9b59b6'
         }).setOrigin(0.5));
 
-        if (result.reward) {
-            if (isRebirth) {
-                modal.add(this.add.text(200, 160, `永久奖励: ${result.reward.name}`, {
-                    fontSize: '18px', fontFamily: GameConfig.typography.fontFamily, color: '#d4a574'
+        if (result.reward && result.reward.unlocks) {
+            const unlockY = 160;
+            result.reward.unlocks.forEach((u, i) => {
+                modal.add(this.add.text(200, unlockY + i * 26, u, {
+                    fontSize: '16px', fontFamily: GameConfig.typography.fontFamily, color: '#d4a574'
                 }).setOrigin(0.5));
-                modal.add(this.add.text(200, 190, result.reward.effect, {
-                    fontSize: '14px', fontFamily: GameConfig.typography.fontFamily, color: '#8b7355'
-                }).setOrigin(0.5));
-            } else if (result.reward.unlocks) {
-                const unlockY = 160;
-                result.reward.unlocks.forEach((u, i) => {
-                    modal.add(this.add.text(200, unlockY + i * 26, u, {
-                        fontSize: '16px', fontFamily: GameConfig.typography.fontFamily, color: '#d4a574'
-                    }).setOrigin(0.5));
-                });
-            }
+            });
         }
 
         const btnY = panelH - 50;

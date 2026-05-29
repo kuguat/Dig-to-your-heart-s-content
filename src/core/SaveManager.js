@@ -41,6 +41,8 @@ class SaveManager {
                 exponent: this.gameState.funds.exponent
             },
             prestigePoints: this.gameState.prestigePoints,
+            jackpotPointsThisRun: this.gameState.jackpotPointsThisRun,
+            earningsThisRun: this.gameState.earningsThisRun,
             currentEra: this.gameState.currentEra,
             totalExcavations: this.gameState.totalExcavations,
             totalArtifactsFound: this.gameState.totalArtifactsFound,
@@ -97,6 +99,8 @@ class SaveManager {
                 this.gameState.funds = new BigNumber(10000);
             }
             this.gameState.prestigePoints = data.prestigePoints || 0;
+            this.gameState.jackpotPointsThisRun = data.jackpotPointsThisRun || 0;
+            this.gameState.earningsThisRun = data.earningsThisRun || 0;
             this.gameState.currentEra = data.currentEra || 'neolithic';
             this.gameState.totalExcavations = data.totalExcavations || 0;
             this.gameState.totalArtifactsFound = data.totalArtifactsFound || 0;

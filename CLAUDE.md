@@ -1,7 +1,7 @@
 # CLAUDE.md — 《挖个爽》考古游戏
 
 ## 项目概览
-Phaser 3 网页端文化考古模拟游戏。1200×800 画布，单 HTML + 18 个 JS 文件，Express 静态服务。
+Phaser 3 网页端文化考古模拟游戏。1200×800 画布，单 HTML + 21 个 JS 文件，Express 静态服务。
 
 ## 文物图标系统
 - 存储: `assets/artifacts/<id>.png` (256×256 PNG-24, 透明背景)
@@ -11,7 +11,7 @@ Phaser 3 网页端文化考古模拟游戏。1200×800 画布，单 HTML + 18 �
 - 规范文档: `文物图标制作规范.md` (20 种类型，81 个 PNG：61 件文物个体图标 + 20 类型通用图标)
 
 ## 场景流转
-BootScene → MainScene ⇄ ExcavationScene / MuseumScene / PrestigeScene / RepairWorkshopScene
+BootScene → MainScene ⇄ ExcavationScene / MuseumScene / RepairWorkshopScene（声望系统在 MainScene 内嵌处理）
 
 ## 新手教程系统
 - `src/tutorial/TutorialManager.js` — 分步引导流程（8步入门），含跨场景衔接（Step5→6 用 `window._tutorialPendingStep` 标记）
@@ -31,9 +31,8 @@ BootScene → MainScene ⇄ ExcavationScene / MuseumScene / PrestigeScene / Repa
 | 4 | 资深考古学家 | 10,000 | 宋元 | 🔧 文物修复工坊 |
 | 5 | 首席考古学家 | 50,000 | 明清 | 🔄 学术休假(转生永久加成) |
 
-- **Lv.0~4**: "提升声望"弹窗自行选择投入 JP 数量（下限5），系统按 1JP=¥500 计算消耗，JP+金钱双重扣除后累积永久声望；重置局内进度但保留图鉴
-- **Lv.5**: 解锁"学术休假"（转生），重置全部进度换取永久加成
-- 门槛校验: `canPrestige()` 要求 JP≥5 且资金≥¥2,500（5×500）
+- **转生（学术休假）**: 无需等级限制，JP≥5 即可。选择投入 JP 数量（下限5），系统按 1JP=¥50,000 计算消耗，JP+金钱双重扣除后累积总 JP 池；总 JP 达到阈值自动提升声望等级（弹窗提示解锁内容），不重置局内进度
+- 门槛校验: `canPrestige()` 要求 JP≥5 且资金≥¥250,000（5×50,000）
 - 诱惑预览：声望技能树只显示当前等级+后2级，再往后显示"???"
 
 ## 核心对象（window 全局）
@@ -78,10 +77,11 @@ BootScene → MainScene ⇄ ExcavationScene / MuseumScene / PrestigeScene / Repa
 - 随机抽取已收集文物，限时修复裂缝（点击🔴）
 - 修复度越高价值倍率越大（2x~5x）
 
-### 学术休假/转生 (Lv.5)
-- 右侧面板"开始转生"按钮
-- 重置进度换取永久加成：+2%全属性/次 + 特定奖励
-- Lv.0~4 只能"提升声望"，不能转生
+### 学术休假/转生
+- 右侧面板"转生"按钮，JP≥5 即可使用
+- 选择投入 JP 数量，1JP=¥50,000，累积到总 JP 池
+- 总 JP 达到声望阈值自动提升等级（弹窗提示解锁内容）
+- 不重置局内进度
 
 ## MainScene 布局 (1200×800)
 - 顶部 (Y=35): 声望 Lv (x=60) / JP (x=195) / 资金 (x=330) / 朝代按钮 6 个 (x=540+index×120)
@@ -94,7 +94,7 @@ BootScene → MainScene ⇄ ExcavationScene / MuseumScene / PrestigeScene / Repa
 - **升级面板文字**: 使用 `setOrigin(0, 0.5)` / `setOrigin(0.5, 0.5)` 居中对齐，背景高 28px
 - **朝代按钮事件**: 用 `btn.off('pointerdown')` 换事件，<strong>禁止 removeInteractive()</strong>（会丢失 hitArea）
 - **全局输入**: `this.input.on('pointerdown')` 在 cleanupMinigame / cleanupExcavation 中必须 `off` 掉
-- **BigNumber**: `new BigNumber(numberOrString)` 接收数字或字符串
+- **BigNumber**: `new BigNumber(numberOrString)` 接收数字或字符串；比较用 `lessThan()`/`greaterThan()`/`equals()`，运算用 `subtract()`/`add()`/`multiply()`/`divide()`，不要用 `lt()`/`gt()`/`minus()`/`plus()`
 
 ## 运行
 ```bash
@@ -104,7 +104,15 @@ npm install && npm run dev
 
 ## 调试 (F12 Console)
 ```js
+// 切换朝代
 gameState.currentEra='shangzhou'; game.scene.start('MainScene');
+// 满声望 (Lv.5)
 gameState.prestigePoints=60000; gameState.prestigeLevel=5; game.scene.start('MainScene');
-gameState.funds=new BigNumber(99999999);
+// 无限金币
+gameState.funds=new BigNumber(1e15);
+// 加本局 JP（刷新后保留：需先转存再刷新）
+let save = JSON.parse(localStorage.getItem('qianzai_game_save'));
+save.jackpotPointsThisRun = 100;
+localStorage.setItem('qianzai_game_save', JSON.stringify(save));
+location.reload();
 ```

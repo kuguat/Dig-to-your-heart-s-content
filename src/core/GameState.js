@@ -146,6 +146,8 @@ class GameState {
         const data = {
             funds: { mantissa: this.funds.mantissa, exponent: this.funds.exponent },
             prestigePoints: this.prestigePoints,
+            jackpotPointsThisRun: this.jackpotPointsThisRun,
+            earningsThisRun: this.earningsThisRun,
             totalExcavations: this.totalExcavations,
             totalArtifactsFound: this.totalArtifactsFound,
             totalAuthenticFound: this.totalAuthenticFound,
@@ -176,6 +178,8 @@ class GameState {
                 this.funds = new BigNumber(10000);
             }
             this.prestigePoints = data.prestigePoints || 0;
+            this.jackpotPointsThisRun = data.jackpotPointsThisRun || 0;
+            this.earningsThisRun = data.earningsThisRun || 0;
             this.totalExcavations = data.totalExcavations || 0;
             this.totalArtifactsFound = data.totalArtifactsFound || 0;
             this.totalAuthenticFound = data.totalAuthenticFound || 0;

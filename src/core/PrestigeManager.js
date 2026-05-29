@@ -63,17 +63,17 @@ class PrestigeManager {
 
     /** 检查是否可以提升声望（JP>=5 且 金钱足够） */
     canPrestige() {
-        return this.gameState.jackpotPointsThisRun >= 5 && this.gameState.funds.gte(2500);
+        return this.gameState.jackpotPointsThisRun >= 5 && this.gameState.funds.gte(250000);
     }
 
-    /** 是否可以转生（满级后才解锁） */
+    /** 是否可以转生（JP>=5 即可，无关等级） */
     canRebirth() {
-        return this.calculatePrestigeLevel() >= 5 && this.canPrestige();
+        return this.canPrestige();
     }
 
     /**
      * 提升声望等级 — Lv.0~4 使用
-     * 消耗 JP + 金钱（1JP = 500元），累积 JP 到永久池，达到阈值自动升级
+     * 消耗 JP + 金钱（1JP = 50000元），累积 JP 到永久池，达到阈值自动升级
      */
     doAdvance(points) {
         if (!points || points < 5) {
@@ -83,13 +83,13 @@ class PrestigeManager {
             return { success: false, message: `本局基金点不足，当前仅有 ${this.gameState.jackpotPointsThisRun} 点` };
         }
 
-        const moneyCost = points * 500;
-        if (this.gameState.funds.lt(moneyCost)) {
+        const moneyCost = points * 50000;
+        if (this.gameState.funds.lessThan(moneyCost)) {
             return { success: false, message: `资金不足，需要 ¥${moneyCost}，当前仅有 ¥${this.gameState.funds.toNumber()}` };
         }
 
         const oldLevel = this.calculatePrestigeLevel();
-        this.gameState.funds = this.gameState.funds.minus(moneyCost);
+        this.gameState.funds = this.gameState.funds.subtract(moneyCost);
         this.gameState.jackpotPointsThisRun -= points;
         this.gameState.prestigePoints += points;
         const newLevel = this.calculatePrestigeLevel();
@@ -119,28 +119,53 @@ class PrestigeManager {
     }
 
     /**
-     * 执行学术休假（转生）— 仅 Lv.5 可用
+     * 执行学术休假（转生）— 无关等级，JP>=5 即可
+     * 消耗 JP + 金钱（1JP=¥50000），将 JP 永久充入总池，不重置进度
+     * @param {number} [points] - 投入的 JP 数量，不传则全部投入
      */
-    doPrestige() {
-        const points = this.gameState.jackpotPointsThisRun;
-        if (points < 5) {
+    doPrestige(points) {
+        const available = this.gameState.jackpotPointsThisRun;
+        const usePoints = points || available;
+        if (usePoints < 5) {
             return { success: false, message: '基金点不足，需要至少5点' };
         }
+        if (usePoints > available) {
+            return { success: false, message: `本局基金点不足，当前仅有 ${available} 点` };
+        }
 
-        this.gameState.prestigePoints += points;
+        const moneyCost = usePoints * 50000;
+        if (this.gameState.funds.lessThan(moneyCost)) {
+            return { success: false, message: `资金不足，需要 ¥${moneyCost}，当前仅有 ¥${this.gameState.funds.toNumber()}` };
+        }
+
+        this.gameState.funds = this.gameState.funds.subtract(moneyCost);
+        this.gameState.jackpotPointsThisRun -= usePoints;
+        this.gameState.prestigePoints += usePoints;
         this.gameState.prestigeCount++;
-        this.gameState.prestigeLevel = this.calculatePrestigeLevel();
 
-        const reward = this.getPrestigeReward();
+        // 检测声望等级是否自动提升
+        const oldLevel = this.gameState.prestigeLevel;
+        const newLevel = this.calculatePrestigeLevel();
+        this.gameState.prestigeLevel = newLevel;
 
-        this.resetForPrestige();
+        const leveledUp = newLevel > oldLevel;
+        let reward = null;
+        if (leveledUp) {
+            reward = this.getLevelUpReward(oldLevel, newLevel);
+        }
 
         return {
             success: true,
-            points: points,
-            reward: reward,
+            points: usePoints,
+            moneyCost: moneyCost,
             prestigeCount: this.gameState.prestigeCount,
-            message: `学术休假完成！转生次数: ${this.gameState.prestigeCount}`
+            leveledUp: leveledUp,
+            oldLevel: oldLevel,
+            newLevel: newLevel,
+            reward: reward,
+            message: leveledUp
+                ? `学术休假完成！声望提升至 Lv.${newLevel} ${PrestigeManager.TIERS[newLevel].name}！投入 ${usePoints} JP`
+                : `学术休假完成！投入 ${usePoints} JP（消耗 ¥${moneyCost}），转生次数: ${this.gameState.prestigeCount}`
         };
     }
 
